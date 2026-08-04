@@ -3940,6 +3940,89 @@ table{ border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.
   border-color: rgba(45, 212, 191, .45);
   color: #fff;
 }
+.feature-quick-menu__layers{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, .22);
+  background: rgba(2, 8, 23, .28);
+}
+.feature-quick-menu__layers-title{
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, .72);
+}
+.feature-quick-menu__layers-list{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.feature-quick-menu__layer-opt{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 40px;
+  padding: 4px 6px 4px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid transparent;
+}
+.feature-quick-menu__layer-opt.is-active{
+  border-color: rgba(45, 212, 191, .35);
+  background: rgba(45, 212, 191, .10);
+}
+.feature-quick-menu__layer-opt input[type="checkbox"]{
+  width: 18px;
+  height: 18px;
+  accent-color: #14b8a6;
+  flex: 0 0 auto;
+}
+.feature-quick-menu__layer-pick{
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: rgba(241, 245, 249, .94);
+  text-align: left;
+  padding: 4px 2px;
+  cursor: pointer;
+  font: inherit;
+}
+.feature-quick-menu__layer-pick-label{
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.feature-quick-menu__layer-pick-hint{
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 650;
+  color: rgba(148, 163, 184, .85);
+  text-transform: lowercase;
+}
+.feature-quick-menu__layer-opt.is-active .feature-quick-menu__layer-pick-hint{
+  color: rgba(94, 234, 212, .95);
+}
+.feature-quick-menu__layers-actions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.feature-quick-menu__action{
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
 .feature-quick-menu__row{
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);

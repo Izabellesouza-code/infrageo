@@ -206,6 +206,7 @@
   const mapBasemapBtn = $("map-basemap-btn");
   const menuToggleLayersBtn = $("menu-toggle-layers");
   const menuFitAmazonasBtn = $("menu-fit-amazonas");
+  const menuDeselectLayersBtn = $("menu-deselect-layers");
   const menuSelectMode = $("menu-select-mode");
   const menuSelectTarget = $("menu-select-target");
   const menuSubtree = $("menu-subtree");
@@ -1475,6 +1476,7 @@
   }
 
   function getToggleElForKind(kind) {
+    const k = String(kind || "");
     const byRef = {
       bueiros: layerBueirosToggle,
       pontes: layerPontesToggle,
@@ -1495,7 +1497,38 @@
       ip4: layerIp4Toggle,
       municipios: layerLimiteMunicipalToggle,
     };
-    return byRef[String(kind || "")] || null;
+    if (byRef[k]) return byRef[k];
+    if (k.startsWith("br-am:")) {
+      const id = k.slice("br-am:".length);
+      return document.getElementById(`layer-br-am-${id}`);
+    }
+    // Fallback genérico: layer-{kind}
+    return document.getElementById(`layer-${k}`);
+  }
+
+  function toggleIdFromKind(kind) {
+    const k = String(kind || "");
+    if (k === "bueiros") return "layer-bueiros-br317";
+    if (k === "pontes") return "layer-pontes-br307";
+    if (k === "jazidas") return "layer-jazidas-br307";
+    if (k === "municipios") return "layer-limite-municipal";
+    if (k.startsWith("br-am:")) return `layer-br-am-${k.slice("br-am:".length)}`;
+    return `layer-${k}`;
+  }
+
+  /** Liga/desliga uma camada pelo kind, disparando o mesmo fluxo da sidebar. */
+  function setLayerToggleAndApply(kind, checked) {
+    const el = getToggleElForKind(kind) || document.getElementById(toggleIdFromKind(kind));
+    if (!el || el.disabled) return false;
+    const next = Boolean(checked);
+    if (el.checked === next) return true;
+    el.checked = next;
+    try {
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    } catch {
+      // ignore
+    }
+    return true;
   }
 
   function setToggleChecked(kind, checked) {
@@ -2853,8 +2886,8 @@
     featureQuickMenuEl.classList.add("is-minimal");
     const list = Array.isArray(results) ? results : null;
     const idx = state.identify?.activeIndex ?? 0;
-    if (list && list.length > 1) {
-      renderIdentifyQuickMenu(list, idx, { minimal: true });
+    if (list && list.length) {
+      renderIdentifyQuickMenu(list, idx, { minimal: true, showLayerPicker: true });
     } else {
       renderFeatureQuickMenu(feature, selectionKind, { minimal: true });
     }
@@ -3561,17 +3594,15 @@
       // ignore
     }
 
-    // Várias camadas no mesmo ponto: pin do menu com chips para escolher com precisão.
+    // Clique no SHP: seleciona a feição e abre menu com checkboxes das camadas no ponto.
     try {
-      if (results.length > 1) {
-        pinFeatureQuickMenu(
-          active.feature || feature,
-          active.selectionKind || selectionKind,
-          e,
-          results,
-          active.layer || layer,
-        );
-      }
+      pinFeatureQuickMenu(
+        active.feature || feature,
+        active.selectionKind || selectionKind,
+        e,
+        results,
+        active.layer || layer,
+      );
     } catch {
       // ignore
     }
@@ -3834,9 +3865,50 @@
     return out;
   }
 
+  function uniqueIdentifyKinds(results) {
+    const seen = new Set();
+    const out = [];
+    for (const r of results || []) {
+      const k = String(r?.selectionKind || "");
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      out.push(k);
+    }
+    return out;
+  }
+
+  function buildIdentifyLayerPickerHtml(results, activeIndex = 0) {
+    const kinds = uniqueIdentifyKinds(results);
+    if (!kinds.length) return "";
+    const activeKind = String(results?.[activeIndex]?.selectionKind || kinds[0] || "");
+    const opts = kinds
+      .map((k) => {
+        const el = getToggleElForKind(k) || document.getElementById(toggleIdFromKind(k));
+        const checked = el ? Boolean(el.checked) : true;
+        const isActive = k === activeKind;
+        const label = escHtmlCell(getSelectionKindLayerLabel(k));
+        return `<label class="feature-quick-menu__layer-opt${isActive ? " is-active" : ""}">
+          <input type="checkbox" data-layer-kind="${escHtmlCell(k)}" ${checked ? "checked" : ""} />
+          <button type="button" class="feature-quick-menu__layer-pick" data-identify-kind="${escHtmlCell(k)}" aria-pressed="${isActive ? "true" : "false"}">
+            <span class="feature-quick-menu__layer-pick-label">${label}</span>
+            <span class="feature-quick-menu__layer-pick-hint">${isActive ? "selecionada" : "selecionar"}</span>
+          </button>
+        </label>`;
+      })
+      .join("");
+    return `<div class="feature-quick-menu__layers" role="group" aria-label="Camadas neste ponto">
+      <div class="feature-quick-menu__layers-title">Camadas neste ponto</div>
+      <div class="feature-quick-menu__layers-list">${opts}</div>
+      <div class="feature-quick-menu__layers-actions">
+        <button type="button" class="btn btn--ghost feature-quick-menu__action" data-action="clear-selection">Limpar seleção</button>
+        <button type="button" class="btn btn--ghost feature-quick-menu__action" data-action="deselect-hit-layers">Desmarcar estas</button>
+      </div>
+    </div>`;
+  }
+
   function renderIdentifyQuickMenu(results, activeIndex = 0, options = {}) {
     if (!featureQuickMenuEl || !featureQuickTitleEl || !featureQuickSubtitleEl || !featureQuickBodyEl) return;
-    const { minimal = false } = options;
+    const { minimal = false, showLayerPicker = false } = options;
     const safeIdx = Math.max(0, Math.min(activeIndex, (results?.length || 1) - 1));
     const active = results?.[safeIdx];
     if (!active?.feature) return;
@@ -3848,17 +3920,24 @@
       getFirstNonEmptyValue(props, [...preferred, ...FEATURE_POPUP.primaryNameKeys]),
     );
     const subtitle = primaryName || "Detalhes da feição";
+    const uniqueKinds = uniqueIdentifyKinds(results);
 
     featureQuickTitleEl.textContent =
-      results.length > 1 ? `Feições (${results.length})` : getSelectionKindLayerLabel(kind);
+      uniqueKinds.length > 1
+        ? `Camadas (${uniqueKinds.length})`
+        : results.length > 1
+          ? `Feições (${results.length})`
+          : getSelectionKindLayerLabel(kind);
     featureQuickSubtitleEl.textContent = normalizePtBrText(
-      results.length > 1 ? `${getSelectionKindLayerLabel(kind)} — ${String(subtitle)}` : String(subtitle),
+      results.length > 1 || uniqueKinds.length > 1
+        ? `${getSelectionKindLayerLabel(kind)} — ${String(subtitle)}`
+        : String(subtitle),
     );
-    featureQuickSubtitleEl.hidden = Boolean(minimal && results.length <= 1 && !primaryName);
+    featureQuickSubtitleEl.hidden = Boolean(minimal && results.length <= 1 && uniqueKinds.length <= 1 && !primaryName);
 
     const chips =
       results.length > 1
-        ? `<div class="feature-quick-menu__chips" role="listbox" aria-label="Camadas neste ponto">
+        ? `<div class="feature-quick-menu__chips" role="listbox" aria-label="Feições neste ponto">
           ${results
             .map((r, i) => {
               const pressed = i === safeIdx ? ' aria-pressed="true"' : ' aria-pressed="false"';
@@ -3874,6 +3953,8 @@
         </div>`
         : "";
 
+    const layerPicker = showLayerPicker || uniqueKinds.length > 0 ? buildIdentifyLayerPickerHtml(results, safeIdx) : "";
+
     let bodyRows = pickQuickMenuRows(props, {
       minimal,
       selectionKind: kind,
@@ -3886,7 +3967,7 @@
         bodyRows = bodyRows.slice(0, FEATURE_POPUP.hover.maxRows);
       }
     }
-    featureQuickBodyEl.innerHTML = chips + buildQuickMenuRowsHtml(bodyRows);
+    featureQuickBodyEl.innerHTML = layerPicker + chips + buildQuickMenuRowsHtml(bodyRows);
   }
 
   function resolveTableLayerId(selectionKind, feature) {
@@ -4237,7 +4318,12 @@
       state.identify.results = [];
       state.identify.activeIndex = 0;
       state.bueirosTableHoverPinned = false;
-      if (!state.featureQuickMenuPinned) hideFeatureQuickMenu(true);
+      try {
+        clearCurrentSelection();
+      } catch {
+        // ignore
+      }
+      hideFeatureQuickMenu(true);
       try {
         hideMapCoordsControl();
       } catch {
@@ -12849,6 +12935,51 @@
 
     featureQuickMenuEl?.addEventListener("click", (event) => {
       const target = event.target;
+
+      const actionBtn = target?.closest?.("button[data-action]");
+      if (actionBtn && featureQuickMenuEl.contains(actionBtn)) {
+        const action = actionBtn.getAttribute("data-action");
+        event.preventDefault();
+        event.stopPropagation();
+        if (action === "clear-selection") {
+          clearCurrentSelection();
+          hideFeatureQuickMenu(true);
+          return;
+        }
+        if (action === "deselect-hit-layers") {
+          const kinds = uniqueIdentifyKinds(state.identify?.results || []);
+          for (const k of kinds) {
+            setLayerToggleAndApply(k, false);
+          }
+          clearCurrentSelection();
+          hideFeatureQuickMenu(true);
+          try {
+            closeMobileSidebarIfNeeded();
+          } catch {
+            // ignore
+          }
+          return;
+        }
+      }
+
+      const pickBtn = target?.closest?.("button[data-identify-kind]");
+      if (pickBtn) {
+        const kind = pickBtn.getAttribute("data-identify-kind");
+        const results = state.identify?.results || [];
+        const idx = results.findIndex((r) => String(r?.selectionKind || "") === String(kind || ""));
+        if (idx < 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const hit = results[idx];
+        state.identify.activeIndex = idx;
+        handleMapFeatureClick(event, hit.feature, hit.layer, hit.selectionKind, {
+          zoomTo: false,
+          identifyResults: results,
+          activeIndex: idx,
+        });
+        return;
+      }
+
       const btn = target?.closest?.("button[data-identify-idx]");
       if (!btn) return;
       const idx = parseInt(btn.getAttribute("data-identify-idx"), 10);
@@ -12865,10 +12996,51 @@
         activeIndex: idx,
       });
       if (state.featureQuickMenuPinned) {
-        renderIdentifyQuickMenu(results, idx, { minimal: true });
+        renderIdentifyQuickMenu(results, idx, { minimal: true, showLayerPicker: true });
         requestAnimationFrame(() => {
           positionFeatureQuickMenuAvoidingRect(getAvoidRectForLayer(hit.layer, hit.feature, event));
         });
+      }
+    });
+
+    featureQuickMenuEl?.addEventListener("change", (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement)) return;
+      if (input.type !== "checkbox") return;
+      const kind = input.getAttribute("data-layer-kind");
+      if (!kind) return;
+      event.stopPropagation();
+      const turnedOn = Boolean(input.checked);
+      setLayerToggleAndApply(kind, turnedOn);
+      if (!turnedOn) {
+        try {
+          clearSelectionForTurnedOffKind(kind);
+        } catch {
+          // ignore
+        }
+        // Se desligou a camada ativa, troca para outra ainda presente ou limpa.
+        const results = (state.identify?.results || []).filter((r) => String(r?.selectionKind || "") !== kind);
+        state.identify.results = results;
+        if (!results.length) {
+          clearCurrentSelection();
+          hideFeatureQuickMenu(true);
+          return;
+        }
+        const nextIdx = Math.min(state.identify.activeIndex || 0, results.length - 1);
+        state.identify.activeIndex = nextIdx;
+        const hit = results[nextIdx];
+        handleMapFeatureClick(event, hit.feature, hit.layer, hit.selectionKind, {
+          zoomTo: false,
+          identifyResults: results,
+          activeIndex: nextIdx,
+        });
+      } else {
+        // Atualiza checkboxes/estado visual do menu.
+        const results = state.identify?.results || [];
+        const idx = state.identify?.activeIndex || 0;
+        if (results.length) {
+          renderIdentifyQuickMenu(results, idx, { minimal: true, showLayerPicker: true });
+        }
       }
     });
 
@@ -13499,6 +13671,20 @@
       e.stopPropagation();
       try {
         toggleDataLayersFromMenu();
+      } catch {
+        // ignore
+      }
+    });
+
+    menuDeselectLayersBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        turnOffAllDataLayersKeepLimiteEstadual();
+        clearCurrentSelection();
+        hideFeatureQuickMenu(true);
+        closeMobileSidebarIfNeeded();
+        setStatus("Camadas desmarcadas — mantido apenas o Limite Estadual", "ok");
       } catch {
         // ignore
       }
