@@ -1,0 +1,31 @@
+# Blueprint Render — InfraGeo AM (WebGIS)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy: Dashboard Render → New → Blueprint → selecione este repositório.
+# Ou: New → Web Service → Runtime Docker (raiz com Dockerfile).
+
+services:
+  - type: web
+    name: webgis-infrageo
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: INFRAGEO_ENV
+        value: production
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: GUNICORN_TIMEOUT
+        value: "180"
+      - key: GUNICORN_PRELOAD
+        value: "true"
+      - key: GUNICORN_KEEPALIVE
+        value: "5"
+      - key: LOG_LEVEL
+        value: info
+      - key: INFRAGEO_BG_WARMUP
+        value: "1"
+      # PORT é definido automaticamente pelo Render — não fixe aqui.

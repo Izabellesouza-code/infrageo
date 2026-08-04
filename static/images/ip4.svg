@@ -1,0 +1,22 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IP4 - instalacoes portuarias">
+  <!-- IP4 = Instalacoes Portuarias Publicas de Pequeno Porte -->
+  <defs>
+    <linearGradient id="ip4g" x1="3" y1="4" x2="21" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- agua -->
+  <path d="M3.2 16.2c1.8-1 3.6-.9 5.4 0 1.8.9 3.6.9 5.4 0 1.8-.9 3.6-.9 5.4 0" fill="none" stroke="url(#ip4g)" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M3.2 18.7c1.8-.9 3.6-.8 5.4.1 1.8.9 3.6.9 5.4 0 1.8-.9 3.6-.9 5.4 0" fill="none" stroke="url(#ip4g)" stroke-width="1.3" stroke-linecap="round" opacity=".92"/>
+
+  <!-- cais -->
+  <rect x="5.4" y="6.2" width="13.2" height="4.7" rx="1.2" fill="rgba(255,255,255,.92)" stroke="rgba(15,23,42,.72)" stroke-width="1.2"/>
+  <!-- rampa -->
+  <path d="M7.1 11.2L16.9 15.9" fill="none" stroke="rgba(15,23,42,.72)" stroke-width="2" stroke-linecap="round"/>
+  <path d="M7.1 11.2L16.6 15.4" fill="none" stroke="rgba(45,212,191,.45)" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- poste/bollard -->
+  <path d="M16.8 10.8v1.6" fill="none" stroke="rgba(15,23,42,.72)" stroke-width="1.2" stroke-linecap="round"/>
+</svg>

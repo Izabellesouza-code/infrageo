@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>InfraGeo AM — WebGIS</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+    <link
+      rel="preload"
+      as="image"
+      href="{{ url_for('static', filename='images/infra_geo_splash.png') }}"
+      fetchpriority="high"
+    />
+  </head>
+
+  <body class="has-loading-splash">
+    <div
+      id="app-loading-splash"
+      class="app-loading-splash"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="app-loading-splash-title"
+      aria-busy="true"
+    >
+      <div class="app-loading-splash__inner">
+        <img
+          class="app-loading-splash__logo"
+          src="{{ url_for('static', filename='images/infra_geo_splash.png') }}"
+          alt="InfraGEO — Produto 05 — Meio Ambiente"
+          width="360"
+          height="200"
+          loading="eager"
+          decoding="sync"
+          fetchpriority="high"
+        />
+        <h1 id="app-loading-splash-title" class="app-loading-splash__title visually-hidden">
+          Carregando InfraGEO
+        </h1>
+        <p class="app-loading-splash__msg">
+          Aguarde enquanto carregamos as informações...
+        </p>
+        <div class="app-loading-splash__spinner" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="app-shell">
+      <header class="topbar" role="banner">
+        <div class="brand">
+          <a
+            href="/"
+            class="brand-logo-link"
+            aria-label="Consórcio SPU — InfraGeo AM"
+            title="Consórcio SPU"
+          >
+            <img
+              class="brand-logo"
+              src="{{ url_for('static', filename='images/logo-consorcio-spu.png') }}"
+              alt="Consórcio SPU"
+              width="200"
+              height="40"
+              decoding="async"
+            />
+          </a>
+          <div class="brand-text">
+            <div class="brand-title">InfraGeo AM</div>
+            <div class="brand-subtitle">Sistema de Informações Geográficas</div>
+          </div>
+        </div>
+
+        <div class="topbar-filters" role="group" aria-label="Filtros de camadas">
+          <button
+            id="global-search-filter-btn"
+            class="btn btn--ghost topbar-filters__btn"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="global-search-filter"
+            title="Filtrar camadas"
+          >
+            Filtros
+          </button>
+        </div>
+
+        <div id="global-search-filter" class="global-search-filter" role="dialog" aria-label="Filtros de camadas" hidden></div>
+        <div id="global-search-results" class="global-search-results" role="listbox" aria-label="Resultados da pesquisa" hidden></div>
+
+        <div class="topbar-actions">
+          <button
+            id="mobile-sidebar-toggle"
+            class="btn btn--ghost mobile-sidebar-toggle"
+            type="button"
+            aria-pressed="false"
+            aria-expanded="false"
+            aria-controls="sidebar"
+            title="Abrir menu e camadas"
+            aria-label="Abrir menu e camadas"
+          >
+            <span class="mobile-sidebar-toggle__icon" aria-hidden="true">☰</span>
+            <span class="mobile-sidebar-toggle__label">Menu</span>
+          </button>
+          <button
+            id="theme-toggle"
+            class="btn btn--ghost theme-toggle"
+            type="button"
+            aria-pressed="false"
+            title="Alternar tema"
+          >
+            ☾
+          </button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <button
+          type="button"
+          id="mobile-sidebar-backdrop"
+          class="mobile-sidebar-backdrop"
+          aria-label="Fechar menu e camadas"
+          tabindex="-1"
+          hidden
+        ></button>
+        <aside id="sidebar" class="sidebar" aria-label="Camadas e ferramentas">
+          <div class="sidebar-section sidebar-section--menu">
+            <div class="sidebar-section-head">
+              <div class="sidebar-title">MENU</div>
+            </div>
+            <div id="menu-subtree" class="menu-subtree" aria-hidden="false">
+              <div class="tool-grid tool-grid--menu" role="group" aria-label="Ações rápidas">
+                <button type="button" id="menu-toggle-layers" class="sidebar-action-btn">
+                  <span class="sidebar-action-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" focusable="false" aria-hidden="true">
+                      <path
+                        d="M12 2v10"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                      />
+                      <path
+                        d="M7 4.8a9 9 0 1 0 10 0"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </span>
+                  <span class="sidebar-action-text">Ligar/Desligar camadas</span>
+                </button>
+                <button type="button" id="menu-fit-amazonas" class="sidebar-action-btn">
+                  <span class="sidebar-action-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" focusable="false" aria-hidden="true">
+                      <path
+                        d="M3.5 6.2l6-2.2 5 2 6-2.2v14.9l-6 2.2-5-2-6 2.2V6.2Z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.0"
+                        stroke-linejoin="round"
+                      />
+                      <path d="M9.5 4v15" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" />
+                      <path d="M14.5 6v15" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" />
+                      <path
+                        d="M12.2 10.1l1.3.6 1.5-.5 1.1 1.1-.6 1.1.7 1.1-1.2.8-1.7-.2-1.2.8-1.6-.5-.7-1.3.9-1.2-.8-1.1 1.3-.8Z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linejoin="round"
+                        opacity=".95"
+                      />
+                    </svg>
+                  </span>
+                  <span class="sidebar-action-text">Enquadrar Amazonas</span>
+                </button>
+                <button
+                  type="button"
+                  id="menu-toggle-legend"
+                  class="sidebar-action-btn"
+                  aria-expanded="false"
+                  aria-controls="map-legend"
+                >
+                  <span class="sidebar-action-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" focusable="false" aria-hidden="true">
+                      <path
+                        d="M5 6h14M5 12h10M5 18h12"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.1"
+                        stroke-linecap="round"
+                      />
+                      <circle cx="19" cy="12" r="2.2" fill="currentColor"/>
+                      <rect x="16.2" y="15.8" width="5.2" height="4.4" rx="1" fill="currentColor" opacity=".85"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar-action-text">Legendas</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="sidebar-section sidebar-section--layers">
+            <div class="sidebar-section-head">
+              <div class="sidebar-title">Camadas</div>
+            </div>
+
+            <div class="sidebar-layers-scroll" role="region" aria-label="Lista de camadas">
+            <div id="layer-group-rodovias" class="layer-group layer-group--rodovias">
+              <button
+                type="button"
+                id="layer-rodovias-head"
+                class="layer-group-heading layer-group-heading--toggle"
+                aria-expanded="false"
+                aria-controls="layer-rodovias-subtree"
+              >
+                <span class="layer-group-heading-chevron" aria-hidden="true">▶</span>
+                <span class="layer-group-heading-icon layer-group-heading-icon--obras" aria-hidden="true" title="Obras de arte (OAE/OAC)">
+                  <svg class="obras-icon" viewBox="0 0 64 64" width="28" height="28" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                    <rect x="4" y="4" width="56" height="56" rx="14" fill="#0f766e"/>
+                    <!-- Via -->
+                    <path d="M8 38h48" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round"/>
+                    <!-- Arco da obra (ponte) -->
+                    <path d="M12 38c3-14 12-22 20-22s17 8 20 22" stroke="#ccfbf1" stroke-width="3" stroke-linecap="round" fill="none"/>
+                    <!-- Pilares -->
+                    <path d="M18 38v12M32 38v14M46 38v12" stroke="#99f6e4" stroke-width="2.8" stroke-linecap="round"/>
+                    <!-- Apoios -->
+                    <path d="M14 50h8M28 52h8M42 50h8" stroke="#5eead4" stroke-width="2.2" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <span class="layer-group-heading-title layer-group-heading-title--only">OAE/OAC</span>
+              </button>
+
+              <div
+                id="layer-rodovias-subtree"
+                class="layer-subtree layer-subtree--br317"
+                role="group"
+                aria-label="Subcamadas — OAE/OAC"
+                aria-hidden="true"
+              >
+                <div id="layer-branch-br317" class="layer-branch layer-branch--br317">
+                  <button
+                    type="button"
+                    id="layer-branch-br317-head"
+                    class="layer-branch-head layer-branch-head--toggle"
+                    aria-expanded="false"
+                    aria-controls="layer-branch-br317-panel"
+                  >
+                    <span class="layer-branch-chevron" aria-hidden="true">▶</span>
+                    <span class="br-shield" aria-hidden="true" title="Rodovia federal BR-317">
+                      <span class="br-shield__prefix">BR</span>
+                      <span class="br-shield__num">317</span>
+                    </span>
+                    <span class="layer-branch-title-block">
+                      <span class="layer-branch-title">BR-317</span>
+                    </span>
+                  </button>
+                  <div id="layer-branch-br317-panel" class="layer-branch-children" role="region" aria-label="Subcamadas BR-317">
+                    <div id="layer-row-bueiros-br317" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--oac" aria-hidden="true" title="Bueiro (OAC)">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="2" y="2" width="60" height="60" rx="14" fill="#2563eb"/>
+                            <rect x="6" y="6" width="52" height="52" rx="11" fill="#1d4ed8"/>
+                            <!-- Boca / tampa do bueiro (bem visível) -->
+                            <circle cx="32" cy="34" r="18" fill="#0f172a" stroke="#e2e8f0" stroke-width="2.5"/>
+                            <circle cx="32" cy="34" r="13" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5"/>
+                            <!-- Grelha -->
+                            <path d="M19 34h26M32 21v26" stroke="#f1f5f9" stroke-width="2.2" stroke-linecap="round"/>
+                            <path d="M22 26h20M22 42h20" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M24 30h16M24 38h16" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" opacity=".9"/>
+                            <!-- Faixa da via (referência) -->
+                            <path d="M12 12h40" stroke="#93c5fd" stroke-width="3" stroke-linecap="round"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Bueiros</div>
+                          <div class="layer-desc" id="layer-bueiros-br317-hint">BR-317</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="bueiros"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Bueiros"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="bueiros" role="menu" hidden>
+                          <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="bueiros">
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar bueiros BR-317">
+                          <input id="layer-bueiros-br317" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="layer-branch-br307" class="layer-branch layer-branch--br317">
+                  <button
+                    type="button"
+                    id="layer-branch-br307-head"
+                    class="layer-branch-head layer-branch-head--toggle"
+                    aria-expanded="false"
+                    aria-controls="layer-branch-br307-panel"
+                  >
+                    <span class="layer-branch-chevron" aria-hidden="true">▶</span>
+                    <span class="br-shield" aria-hidden="true" title="Rodovia federal BR-307">
+                      <span class="br-shield__prefix">BR</span>
+                      <span class="br-shield__num">307</span>
+                    </span>
+                    <span class="layer-branch-title-block">
+                      <span class="layer-branch-title">BR-307</span>
+                    </span>
+                  </button>
+                  <div id="layer-branch-br307-panel" class="layer-branch-children" role="region" aria-label="Subcamadas BR-307">
+                    <div id="layer-row-pontes-br307" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--oae" aria-hidden="true" title="OAE — Obra de Arte Especial">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" width="20" height="20" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="4" y="4" width="56" height="56" rx="14" fill="#0f766e"/>
+                            <path d="M10 34h44" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"/>
+                            <path d="M14 34c2.5-12 10.5-18 18-18s15.5 6 18 18" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+                            <path d="M18 34v10M32 34v12M46 34v10" stroke="#ccfbf1" stroke-width="2.8" stroke-linecap="round"/>
+                            <path d="M12 48h40" stroke="#99f6e4" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Pontes</div>
+                          <div class="layer-desc" id="layer-pontes-br307-hint">BR-307</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="pontes"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Pontes"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="pontes" role="menu" hidden>
+                          <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="pontes">
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar pontes BR-307">
+                          <input id="layer-pontes-br307" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                    <div id="layer-row-jazidas-br307" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon" aria-hidden="true">⛏️</span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Jazidas</div>
+                          <div class="layer-desc" id="layer-jazidas-br307-hint">BR-307</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="jazidas"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Jazidas"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="jazidas" role="menu" hidden>
+                          <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="jazidas">
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar jazidas BR-307">
+                          <input id="layer-jazidas-br307" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="layer-branch-br319" class="layer-branch layer-branch--br317">
+                  <button
+                    type="button"
+                    id="layer-branch-br319-head"
+                    class="layer-branch-head layer-branch-head--toggle"
+                    aria-expanded="false"
+                    aria-controls="layer-branch-br319-panel"
+                  >
+                    <span class="layer-branch-chevron" aria-hidden="true">▶</span>
+                    <span class="br-shield" aria-hidden="true" title="Rodovia federal BR-319">
+                      <span class="br-shield__prefix">BR</span>
+                      <span class="br-shield__num">319</span>
+                    </span>
+                    <span class="layer-branch-title-block">
+                      <span class="layer-branch-title">BR-319</span>
+                    </span>
+                  </button>
+                  <div id="layer-branch-br319-panel" class="layer-branch-children" role="region" aria-label="Subcamadas BR-319">
+                    <div id="layer-row-bueiros-br319" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--oac" aria-hidden="true" title="Bueiro (OAC)">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="2" y="2" width="60" height="60" rx="14" fill="#2563eb"/>
+                            <rect x="6" y="6" width="52" height="52" rx="11" fill="#1d4ed8"/>
+                            <!-- Boca / tampa do bueiro (bem visível) -->
+                            <circle cx="32" cy="34" r="18" fill="#0f172a" stroke="#e2e8f0" stroke-width="2.5"/>
+                            <circle cx="32" cy="34" r="13" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5"/>
+                            <!-- Grelha -->
+                            <path d="M19 34h26M32 21v26" stroke="#f1f5f9" stroke-width="2.2" stroke-linecap="round"/>
+                            <path d="M22 26h20M22 42h20" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M24 30h16M24 38h16" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" opacity=".9"/>
+                            <!-- Faixa da via (referência) -->
+                            <path d="M12 12h40" stroke="#93c5fd" stroke-width="3" stroke-linecap="round"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Bueiros</div>
+                          <div class="layer-desc" id="layer-bueiros-br319-hint">BR-319</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="bueiros-br319"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Bueiros BR-319"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="bueiros-br319" role="menu" hidden>
+                          <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="bueiros-br319">
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar bueiros BR-319">
+                          <input id="layer-bueiros-br319" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                    <div id="layer-row-pontes-br319" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--oae" aria-hidden="true" title="OAE — Obra de Arte Especial">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" width="20" height="20" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="4" y="4" width="56" height="56" rx="14" fill="#0f766e"/>
+                            <path d="M10 34h44" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"/>
+                            <path d="M14 34c2.5-12 10.5-18 18-18s15.5 6 18 18" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+                            <path d="M18 34v10M32 34v12M46 34v10" stroke="#ccfbf1" stroke-width="2.8" stroke-linecap="round"/>
+                            <path d="M12 48h40" stroke="#99f6e4" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Pontes</div>
+                          <div class="layer-desc" id="layer-pontes-br319-hint">BR-319</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="pontes-br319"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Pontes BR-319"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="pontes-br319" role="menu" hidden>
+                          <button
+                            type="button"
+                            class="layer-kebab-item"
+                            role="menuitem"
+                            data-layer-action="table"
+                            data-layer="pontes-br319"
+                          >
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar pontes BR-319">
+                          <input id="layer-pontes-br319" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                    <div id="layer-row-pca-prads-br319" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon" aria-hidden="true">🌱</span>
+                        <div class="layer-meta">
+                          <div class="layer-name">PCA - PRADS</div>
+                          <div class="layer-desc" id="layer-pca-prads-br319-hint">BR-319</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="pca-prads-br319"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada PCA - PRADS BR-319"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="pca-prads-br319" role="menu" hidden>
+                          <button
+                            type="button"
+                            class="layer-kebab-item"
+                            role="menuitem"
+                            data-layer-action="table"
+                            data-layer="pca-prads-br319"
+                          >
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar PCA - PRADS BR-319">
+                          <input id="layer-pca-prads-br319" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                    <div id="layer-row-pca-prads-cmm-br319" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon" aria-hidden="true">🌿</span>
+                        <div class="layer-meta">
+                          <div class="layer-name">PCA - PRADS CMM</div>
+                          <div class="layer-desc" id="layer-pca-prads-cmm-br319-hint">BR-319</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="pca-prads-cmm-br319"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada PCA - PRADS CMM BR-319"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="pca-prads-cmm-br319" role="menu" hidden>
+                          <button
+                            type="button"
+                            class="layer-kebab-item"
+                            role="menuitem"
+                            data-layer-action="table"
+                            data-layer="pca-prads-cmm-br319"
+                          >
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar PCA - PRADS CMM BR-319">
+                          <input id="layer-pca-prads-cmm-br319" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                    <div id="layer-row-prads-br319" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon" aria-hidden="true">🌲</span>
+                        <div class="layer-meta">
+                          <div class="layer-name">PRADS</div>
+                          <div class="layer-desc" id="layer-prads-br319-hint">BR-319</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="prads-br319"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada PRADS BR-319"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="prads-br319" role="menu" hidden>
+                          <button
+                            type="button"
+                            class="layer-kebab-item"
+                            role="menuitem"
+                            data-layer-action="table"
+                            data-layer="prads-br319"
+                          >
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar PRADS BR-319">
+                          <input id="layer-prads-br319" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="layer-branch-br230" class="layer-branch layer-branch--br317">
+                  <button
+                    type="button"
+                    id="layer-branch-br230-head"
+                    class="layer-branch-head layer-branch-head--toggle"
+                    aria-expanded="false"
+                    aria-controls="layer-branch-br230-panel"
+                  >
+                    <span class="layer-branch-chevron" aria-hidden="true">▶</span>
+                    <span class="br-shield" aria-hidden="true" title="Rodovia federal BR-230">
+                      <span class="br-shield__prefix">BR</span>
+                      <span class="br-shield__num">230</span>
+                    </span>
+                    <span class="layer-branch-title-block">
+                      <span class="layer-branch-title">BR-230</span>
+                    </span>
+                  </button>
+                  <div id="layer-branch-br230-panel" class="layer-branch-children" role="region" aria-label="Subcamadas BR-230">
+                    <div id="layer-row-bueiros-br230" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--oac" aria-hidden="true" title="Bueiro (OAC)">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="2" y="2" width="60" height="60" rx="14" fill="#2563eb"/>
+                            <rect x="6" y="6" width="52" height="52" rx="11" fill="#1d4ed8"/>
+                            <!-- Boca / tampa do bueiro (bem visível) -->
+                            <circle cx="32" cy="34" r="18" fill="#0f172a" stroke="#e2e8f0" stroke-width="2.5"/>
+                            <circle cx="32" cy="34" r="13" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5"/>
+                            <!-- Grelha -->
+                            <path d="M19 34h26M32 21v26" stroke="#f1f5f9" stroke-width="2.2" stroke-linecap="round"/>
+                            <path d="M22 26h20M22 42h20" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M24 30h16M24 38h16" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" opacity=".9"/>
+                            <!-- Faixa da via (referência) -->
+                            <path d="M12 12h40" stroke="#93c5fd" stroke-width="3" stroke-linecap="round"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Bueiros</div>
+                          <div class="layer-desc" id="layer-bueiros-br230-hint">BR-230</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="bueiros-br230"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Bueiros BR-230"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="bueiros-br230" role="menu" hidden>
+                          <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="bueiros-br230">
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar bueiros BR-230">
+                          <input id="layer-bueiros-br230" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                    <div id="layer-row-pontes-br230" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--oae" aria-hidden="true" title="OAE — Obra de Arte Especial">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" width="20" height="20" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="4" y="4" width="56" height="56" rx="14" fill="#0f766e"/>
+                            <path d="M10 34h44" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"/>
+                            <path d="M14 34c2.5-12 10.5-18 18-18s15.5 6 18 18" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+                            <path d="M18 34v10M32 34v12M46 34v10" stroke="#ccfbf1" stroke-width="2.8" stroke-linecap="round"/>
+                            <path d="M12 48h40" stroke="#99f6e4" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Pontes</div>
+                          <div class="layer-desc" id="layer-pontes-br230-hint">BR-230</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="pontes-br230"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Pontes BR-230"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="pontes-br230" role="menu" hidden>
+                          <button
+                            type="button"
+                            class="layer-kebab-item"
+                            role="menuitem"
+                            data-layer-action="table"
+                            data-layer="pontes-br230"
+                          >
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar pontes BR-230">
+                          <input id="layer-pontes-br230" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="layer-branch-br174" class="layer-branch layer-branch--br317">
+                  <button
+                    type="button"
+                    id="layer-branch-br174-head"
+                    class="layer-branch-head layer-branch-head--toggle"
+                    aria-expanded="false"
+                    aria-controls="layer-branch-br174-panel"
+                  >
+                    <span class="layer-branch-chevron" aria-hidden="true">▶</span>
+                    <span class="br-shield" aria-hidden="true" title="Rodovia federal BR-174">
+                      <span class="br-shield__prefix">BR</span>
+                      <span class="br-shield__num">174</span>
+                    </span>
+                    <span class="layer-branch-title-block">
+                      <span class="layer-branch-title">BR-174</span>
+                    </span>
+                  </button>
+                  <div id="layer-branch-br174-panel" class="layer-branch-children" role="region" aria-label="Subcamadas BR-174">
+                    <div id="layer-row-bueiros-br174" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--oac" aria-hidden="true" title="Bueiro (OAC)">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="2" y="2" width="60" height="60" rx="14" fill="#2563eb"/>
+                            <rect x="6" y="6" width="52" height="52" rx="11" fill="#1d4ed8"/>
+                            <!-- Boca / tampa do bueiro (bem visível) -->
+                            <circle cx="32" cy="34" r="18" fill="#0f172a" stroke="#e2e8f0" stroke-width="2.5"/>
+                            <circle cx="32" cy="34" r="13" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5"/>
+                            <!-- Grelha -->
+                            <path d="M19 34h26M32 21v26" stroke="#f1f5f9" stroke-width="2.2" stroke-linecap="round"/>
+                            <path d="M22 26h20M22 42h20" stroke="#cbd5e1" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M24 30h16M24 38h16" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" opacity=".9"/>
+                            <!-- Faixa da via (referência) -->
+                            <path d="M12 12h40" stroke="#93c5fd" stroke-width="3" stroke-linecap="round"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Bueiros</div>
+                          <div class="layer-desc" id="layer-bueiros-br174-hint">BR-174</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="bueiros-br174"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Bueiros BR-174"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="bueiros-br174" role="menu" hidden>
+                          <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="bueiros-br174">
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar bueiros BR-174">
+                          <input id="layer-bueiros-br174" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div id="layer-row-prads-br174" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon" aria-hidden="true" title="Programa / cadastro rodoviário">📋</span>
+                        <div class="layer-meta">
+                          <div class="layer-name">PRADS</div>
+                          <div class="layer-desc" id="layer-prads-br174-hint">BR-174</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="prads-br174"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada PRADS BR-174"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="prads-br174" role="menu" hidden>
+                          <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="prads-br174">
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar PRADS BR-174">
+                          <input id="layer-prads-br174" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          <div id="layer-group-br-am" class="layer-group layer-group--br-am" hidden>
+            <button
+              type="button"
+              id="layer-br-am-head"
+              class="layer-group-heading layer-group-heading--toggle"
+              aria-expanded="false"
+              aria-controls="layer-br-am-subtree"
+            >
+              <span class="layer-group-heading-chevron" aria-hidden="true">▶</span>
+              <span class="layer-group-heading-icon layer-group-heading-icon--br" aria-hidden="true" title="Rodovias federais no Amazonas">
+                <span class="br-shield br-shield--sm">
+                  <span class="br-shield__prefix">BR</span>
+                </span>
+              </span>
+              <span class="layer-group-heading-title layer-group-heading-title--only">BR-AM</span>
+            </button>
+
+            <div
+              id="layer-br-am-subtree"
+              class="layer-subtree"
+              role="group"
+              aria-label="Subcamadas — BR-AM"
+              aria-hidden="true"
+            ></div>
+          </div>
+
+          <div id="layer-group-aquaviario" class="layer-group layer-group--aquaviario">
+            <button
+              type="button"
+              id="layer-aquaviario-head"
+              class="layer-group-heading layer-group-heading--toggle"
+              aria-expanded="false"
+              aria-controls="layer-aquaviario-subtree"
+            >
+              <span class="layer-group-heading-chevron" aria-hidden="true">▶</span>
+              <span class="layer-group-heading-icon layer-group-heading-icon--aquaviario" aria-hidden="true" title="Meio aquaviário">
+                <svg class="aquaviario-icon" viewBox="0 0 64 64" width="28" height="28" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                  <rect x="4" y="4" width="56" height="56" rx="14" fill="#0369a1"/>
+                  <path d="M12 40c5-4 8 4 13 0s8 4 13 0 8 4 13 0" stroke="#e0f2fe" stroke-width="3" stroke-linecap="round" fill="none"/>
+                  <path d="M14 46c5-3.5 8 3.5 12 0s8 3.5 12 0 8 3.5 12 0" stroke="#7dd3fc" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+                  <path d="M22 34l10-14 10 14H22z" fill="#f0f9ff"/>
+                  <path d="M28 28h8v4h-8z" fill="#bae6fd"/>
+                </svg>
+              </span>
+              <span class="layer-group-heading-title layer-group-heading-title--only">Aquaviário</span>
+            </button>
+
+            <div
+              id="layer-aquaviario-subtree"
+              class="layer-subtree"
+              role="group"
+              aria-label="Subcamadas — Aquaviário"
+              aria-hidden="true"
+            >
+              <div
+                id="layer-row-ip4"
+                class="layer-row layer-row--nested"
+                role="group"
+                aria-label="Instalações Portuárias (IP4)"
+              >
+                <div class="layer-left">
+                  <span class="layer-icon layer-icon--svg layer-icon--ip4" aria-hidden="true" title="IP4">
+                    <img
+                      src="{{ url_for('static', filename='images/ip4.png') }}"
+                      onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/ip4.svg') }}';"
+                      alt=""
+                      width="20"
+                      height="20"
+                      decoding="async"
+                    />
+                  </span>
+                  <div class="layer-meta">
+                    <div class="layer-name">IP4</div>
+                    <div class="layer-desc" id="layer-ip4-hint">Instalações Portuárias</div>
+                  </div>
+                </div>
+                <div class="layer-right">
+                  <button
+                    type="button"
+                    class="layer-kebab"
+                    data-layer-menu="ip4"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Opções da camada IP4"
+                    title="Opções"
+                  >
+                    ⋯
+                  </button>
+                  <div class="layer-kebab-menu" data-layer-menu-popover="ip4" role="menu" hidden>
+                    <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="ip4">
+                      Tabela de atributos
+                    </button>
+                  </div>
+                  <label class="switch" title="Mostrar/ocultar camada IP4">
+                    <input id="layer-ip4" type="checkbox" />
+                    <span class="switch-ui"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div
+                id="layer-row-hidrovias-am"
+                class="layer-row layer-row--nested"
+                role="group"
+                aria-label="Hidrovias"
+              >
+                <div class="layer-left">
+                  <span class="layer-icon layer-icon--svg layer-icon--hidrovias" aria-hidden="true" title="Hidrovias">
+                    <img
+                      src="{{ url_for('static', filename='images/hidrovias-am.svg') }}"
+                      alt=""
+                      width="20"
+                      height="20"
+                      decoding="async"
+                    />
+                  </span>
+                  <div class="layer-meta">
+                    <div class="layer-name">Hidrovias</div>
+                  </div>
+                </div>
+                <div class="layer-right">
+                  <button
+                    type="button"
+                    class="layer-kebab"
+                    data-layer-menu="hidrovias-am"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Opções da camada Hidrovias"
+                    title="Opções"
+                  >
+                    ⋯
+                  </button>
+                  <div class="layer-kebab-menu" data-layer-menu-popover="hidrovias-am" role="menu" hidden>
+                    <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="hidrovias-am">
+                      Tabela de atributos
+                    </button>
+                  </div>
+                  <label class="switch" title="Mostrar/ocultar camada Hidrovias">
+                    <input id="layer-hidrovias-am" type="checkbox" />
+                    <span class="switch-ui"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="layer-group-uc" class="layer-group layer-group--uc">
+            <button
+              type="button"
+              id="layer-uc-head"
+              class="layer-group-heading layer-group-heading--toggle"
+              aria-expanded="false"
+              aria-controls="layer-uc-subtree"
+            >
+              <span class="layer-group-heading-chevron" aria-hidden="true">▶</span>
+              <span class="layer-group-heading-icon layer-group-heading-icon--uc" aria-hidden="true" title="Unidades de Conservação">
+                <svg class="uc-icon" viewBox="0 0 64 64" width="28" height="28" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                  <rect x="4" y="4" width="56" height="56" rx="14" fill="#15803d"/>
+                  <path d="M32 14c-2 8-10 12-10 22a10 10 0 0 0 20 0c0-10-8-14-10-22z" fill="#bbf7d0"/>
+                  <path d="M32 28v22" stroke="#166534" stroke-width="3.2" stroke-linecap="round"/>
+                  <path d="M20 50h24" stroke="#86efac" stroke-width="2.6" stroke-linecap="round"/>
+                  <path d="M24 34c4-2 8-2 12 0M22 40c5-2 11-2 16 0" stroke="#4ade80" stroke-width="2" stroke-linecap="round" fill="none"/>
+                </svg>
+              </span>
+              <span class="layer-group-heading-title layer-group-heading-title--only">Unidades de Conservação</span>
+            </button>
+
+            <div
+              id="layer-uc-subtree"
+              class="layer-subtree"
+              role="group"
+              aria-label="Subcamadas — Unidades de Conservação"
+              aria-hidden="true"
+            >
+              <div
+                id="layer-row-uc-estadual"
+                class="layer-row layer-row--nested"
+                role="group"
+                aria-label="Unidades de Conservação Estaduais"
+              >
+                <div class="layer-left">
+                  <span class="layer-icon" aria-hidden="true">🌲</span>
+                  <div class="layer-meta">
+                    <div class="layer-name">UC Estadual</div>
+                  </div>
+                </div>
+                <div class="layer-right">
+                  <button
+                    type="button"
+                    class="layer-kebab"
+                    data-layer-menu="uc-estadual"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Opções da camada UC Estadual"
+                    title="Opções"
+                  >
+                    ⋯
+                  </button>
+                  <div class="layer-kebab-menu" data-layer-menu-popover="uc-estadual" role="menu" hidden>
+                    <button
+                      type="button"
+                      class="layer-kebab-item"
+                      role="menuitem"
+                      data-layer-action="table"
+                      data-layer="uc-estadual"
+                    >
+                      Tabela de atributos
+                    </button>
+                  </div>
+                  <label class="switch" title="Mostrar/ocultar camada UC Estadual">
+                    <input id="layer-uc-estadual" type="checkbox" />
+                    <span class="switch-ui"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div
+                id="layer-row-uc-municipal"
+                class="layer-row layer-row--nested"
+                role="group"
+                aria-label="Unidades de Conservação Municipais"
+              >
+                <div class="layer-left">
+                  <span class="layer-icon" aria-hidden="true">🌳</span>
+                  <div class="layer-meta">
+                    <div class="layer-name">UC Municipal</div>
+                  </div>
+                </div>
+                <div class="layer-right">
+                  <button
+                    type="button"
+                    class="layer-kebab"
+                    data-layer-menu="uc-municipal"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Opções da camada UC Municipal"
+                    title="Opções"
+                  >
+                    ⋯
+                  </button>
+                  <div class="layer-kebab-menu" data-layer-menu-popover="uc-municipal" role="menu" hidden>
+                    <button
+                      type="button"
+                      class="layer-kebab-item"
+                      role="menuitem"
+                      data-layer-action="table"
+                      data-layer="uc-municipal"
+                    >
+                      Tabela de atributos
+                    </button>
+                  </div>
+                  <label class="switch" title="Mostrar/ocultar camada UC Municipal">
+                    <input id="layer-uc-municipal" type="checkbox" />
+                    <span class="switch-ui"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div
+                id="layer-row-ti-am"
+                class="layer-row layer-row--nested"
+                role="group"
+                aria-label="Terras Indígenas do Amazonas"
+              >
+                <div class="layer-left">
+                  <span class="layer-icon layer-icon--svg" aria-hidden="true" title="Terras Indígenas">
+                    <img
+                      src="{{ url_for('static', filename='images/ti-am.svg') }}"
+                      alt=""
+                      width="20"
+                      height="20"
+                      decoding="async"
+                    />
+                  </span>
+                  <div class="layer-meta">
+                    <div class="layer-name">TI AM</div>
+                  </div>
+                </div>
+                <div class="layer-right">
+                  <button
+                    type="button"
+                    class="layer-kebab"
+                    data-layer-menu="ti-am"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Opções da camada TI AM"
+                    title="Opções"
+                  >
+                    ⋯
+                  </button>
+                  <div class="layer-kebab-menu" data-layer-menu-popover="ti-am" role="menu" hidden>
+                    <button type="button" class="layer-kebab-item" role="menuitem" data-layer-action="table" data-layer="ti-am">
+                      Tabela de atributos
+                    </button>
+                  </div>
+                  <label class="switch" title="Mostrar/ocultar camada TI AM">
+                    <input id="layer-ti-am" type="checkbox" />
+                    <span class="switch-ui"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+            <div id="layer-group-limite" class="layer-group layer-group--limite layer-group--limites-am">
+              <button
+                type="button"
+                id="layer-limites-am-head"
+                class="layer-group-heading layer-group-heading--toggle"
+                aria-expanded="false"
+                aria-controls="layer-limites-am-subtree"
+              >
+                <span class="layer-group-heading-chevron" aria-hidden="true">▶</span>
+                <span class="layer-group-heading-icon layer-group-heading-icon--limites-am" aria-hidden="true" title="Limites do Amazonas">
+                  <svg class="limites-am-icon" viewBox="0 0 64 64" width="28" height="28" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                    <rect x="4" y="4" width="56" height="56" rx="14" fill="#1d4ed8"/>
+                    <path d="M18 20h28v24H18z" fill="none" stroke="#dbeafe" stroke-width="2.8" stroke-linejoin="round"/>
+                    <path d="M18 32h28M32 20v24" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="32" cy="32" r="3.2" fill="#f8fafc"/>
+                  </svg>
+                </span>
+                <span class="layer-group-heading-title layer-group-heading-title--only">Limites AM</span>
+              </button>
+
+              <div
+                id="layer-limites-am-subtree"
+                class="layer-subtree"
+                role="group"
+                aria-label="Subcamadas — Limites AM"
+                aria-hidden="true"
+              >
+                <div
+                  id="layer-row-limite-estadual"
+                  class="layer-row layer-row--nested layer-row--limite-am"
+                  role="group"
+                  aria-label="Limite Estadual"
+                >
+                  <div class="layer-left">
+                    <span class="layer-icon layer-icon--amazonas" title="Contorno do estado do Amazonas">
+                      <img
+                        src="{{ url_for('static', filename='images/amazonas-estado-mini.svg') }}"
+                        alt=""
+                        width="28"
+                        height="28"
+                        decoding="async"
+                      />
+                    </span>
+                    <div class="layer-meta">
+                      <div class="layer-name">Limite Estadual</div>
+                    </div>
+                  </div>
+                  <label class="switch" title="Mostrar ou ocultar o Limite Estadual no mapa">
+                    <input
+                      id="layer-limite-estadual"
+                      type="checkbox"
+                      checked
+                      aria-label="Limite Estadual no mapa"
+                    />
+                    <span class="switch-ui"></span>
+                  </label>
+                </div>
+
+                <div
+                  id="layer-row-limite-municipal"
+                  class="layer-row layer-row--nested"
+                  role="group"
+                  aria-label="Limite Municipal"
+                >
+                  <div class="layer-left">
+                    <span class="layer-icon" aria-hidden="true">🏘️</span>
+                    <div class="layer-meta">
+                      <div class="layer-name">Limite Municipal</div>
+                    </div>
+                  </div>
+                  <label class="switch" title="Mostrar ou ocultar o Limite Municipal no mapa">
+                    <input id="layer-limite-municipal" type="checkbox" aria-label="Limite Municipal no mapa" />
+                    <span class="switch-ui"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            </div>
+
+            <div class="camadas-foot" aria-label="Resumo das camadas ativas">
+              <div class="camadas-foot__head">
+                <div class="camadas-foot__label">No mapa agora</div>
+                <div id="camadas-foot-count" class="camadas-foot__count">0</div>
+              </div>
+              <ul id="camadas-foot-list" class="camadas-foot__list" aria-live="polite"></ul>
+              <p id="camadas-foot-empty" class="camadas-foot__empty">
+                Nenhuma camada de dados ligada. Use os grupos acima para ligar no mapa.
+              </p>
+            </div>
+          </div>
+
+        </aside>
+
+        <main class="map-stage" aria-label="Mapa">
+          <div class="map-wrap">
+            <div id="map" aria-label="Mapa do estado do Amazonas"></div>
+
+            <div
+              id="map-legend"
+              class="map-legend"
+              role="region"
+              aria-label="Legendas do mapa"
+              aria-hidden="true"
+            >
+              <div class="map-legend__head">
+                <div class="map-legend__title">Legendas</div>
+                <button type="button" id="map-legend-close" class="map-legend__close" aria-label="Fechar legendas" title="Fechar">
+                  ×
+                </button>
+              </div>
+              <div id="map-legend-body" class="map-legend__body"></div>
+              <div class="map-legend__foot">
+                <span class="map-legend__hint">Árvore de Camadas · marque para ligar</span>
+                <button
+                  type="button"
+                  id="map-legend-clear"
+                  class="map-legend__clear"
+                  title="Desligar camadas da legenda"
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
+
+            <div class="map-basemap-control" id="map-basemap-control">
+              <button
+                type="button"
+                id="map-basemap-btn"
+                class="map-basemap-btn"
+                aria-expanded="false"
+                aria-controls="map-basemap-picker"
+                aria-haspopup="dialog"
+                title="Mapa base"
+              >
+                <span class="map-basemap-btn__icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3l9 5-9 5-9-5 9-5Z"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M21 12l-9 5-9-5"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      opacity=".95"
+                    />
+                    <path
+                      d="M21 16l-9 5-9-5"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      opacity=".75"
+                    />
+                  </svg>
+                </span>
+                <span class="visually-hidden">Escolher mapa base</span>
+              </button>
+
+              <div
+                id="map-basemap-picker"
+                class="map-basemap-picker"
+                role="dialog"
+                aria-label="Mapas base disponíveis"
+              >
+                <fieldset class="map-basemap-picker__fieldset">
+                  <legend class="map-basemap-picker__legend">Mapa base</legend>
+                  <div class="map-basemap-picker__list" role="radiogroup" aria-label="Tipo de mapa base">
+                    <label class="map-basemap-option">
+                      <input type="radio" name="basemap-choice" value="imagery" class="map-basemap-option__input" />
+                      <span class="map-basemap-option__icon" aria-hidden="true">🛰️</span>
+                      <span class="map-basemap-option__text">Satélite (Esri)</span>
+                    </label>
+                    <label class="map-basemap-option">
+                      <input type="radio" name="basemap-choice" value="google-earth" class="map-basemap-option__input" />
+                      <span class="map-basemap-option__icon" aria-hidden="true">🌍</span>
+                      <span class="map-basemap-option__text">Google Earth</span>
+                    </label>
+                    <label class="map-basemap-option">
+                      <input type="radio" name="basemap-choice" value="osm" class="map-basemap-option__input" />
+                      <span class="map-basemap-option__icon" aria-hidden="true">🗺️</span>
+                      <span class="map-basemap-option__text">OpenStreetMap</span>
+                    </label>
+                    <label class="map-basemap-option">
+                      <input type="radio" name="basemap-choice" value="streets" class="map-basemap-option__input" />
+                      <span class="map-basemap-option__icon" aria-hidden="true">🛣️</span>
+                      <span class="map-basemap-option__text">Ruas (referência)</span>
+                    </label>
+                    <label class="map-basemap-option">
+                      <input type="radio" name="basemap-choice" value="topo" class="map-basemap-option__input" />
+                      <span class="map-basemap-option__icon" aria-hidden="true">⛰️</span>
+                      <span class="map-basemap-option__text">Outdoor / relevo</span>
+                    </label>
+                    <label class="map-basemap-option">
+                      <input type="radio" name="basemap-choice" value="carto-positron" class="map-basemap-option__input" checked />
+                      <span class="map-basemap-option__icon" aria-hidden="true">🎨</span>
+                      <span class="map-basemap-option__text">Carto Positron</span>
+                    </label>
+                  </div>
+                </fieldset>
+              </div>
+
+              <!-- Mantido para lógica existente (desabilitar opções indisponíveis); oculto visualmente -->
+              <select id="basemap-select" class="visually-hidden" aria-hidden="true" tabindex="-1">
+                <option value="imagery" selected>imagery</option>
+                <option value="google-earth">google-earth</option>
+                <option value="osm">osm</option>
+                <option value="streets">streets</option>
+                <option value="topo">topo</option>
+                <option value="terrain">terrain</option>
+                <option value="carto-positron">carto-positron</option>
+                <option value="gray">gray</option>
+                <option value="dark">dark</option>
+              </select>
+            </div>
+
+            <div
+              id="bottom-sheet"
+              class="bottom-sheet is-collapsed"
+              aria-label="Tabela de atributos"
+              aria-hidden="true"
+            >
+              <div id="bottom-sheet-handle" class="bottom-sheet-handle" role="separator" aria-label="Ajustar altura">
+                <div class="bottom-sheet-grip"></div>
+              </div>
+              <div class="bottom-sheet-head">
+                <button type="button" class="bottom-sheet-peek-main" id="bottom-sheet-peek-main" aria-label="Abrir tabela de atributos">
+                  <span class="bottom-sheet-peek-static">
+                    <span id="bottom-sheet-peek-label" class="bottom-sheet-peek-label">Tabela de atributos</span>
+                    <span id="bottom-sheet-peek-hint" class="bottom-sheet-peek-hint">Toque para expandir</span>
+                  </span>
+                  <span id="panel-table-label" class="bottom-sheet-head__title bottom-sheet-head__title--expanded">—</span>
+                </button>
+                <div class="bottom-sheet-actions">
+                  <button id="bottom-zoom-selected" class="sheet-btn sheet-btn--primary" type="button" disabled>Zoom</button>
+                  <button id="bottom-sheet-restore" class="sheet-btn sheet-btn--expand" type="button" hidden aria-label="Abrir tabela completa">Tabela</button>
+                  <button id="bottom-sheet-close" class="sheet-btn sheet-btn--icon" type="button" aria-label="Fechar tabela">×</button>
+                </div>
+                <span id="general-selection-info" class="bottom-sheet-head__meta visually-hidden" aria-live="polite" hidden></span>
+              </div>
+              <div id="all-attributes" class="bottom-sheet-body"></div>
+            </div>
+
+            <aside id="feature-quick-menu" class="feature-quick-menu" aria-label="Detalhes da feição">
+              <button
+                id="feature-quick-close"
+                class="feature-quick-menu__close"
+                type="button"
+                aria-label="Fechar detalhes"
+              >
+                ×
+              </button>
+              <header class="feature-quick-menu__head">
+                <div id="feature-quick-title" class="feature-quick-menu__title">DETALHES</div>
+                <div id="feature-quick-subtitle" class="feature-quick-menu__subtitle">Selecione uma feição</div>
+              </header>
+              <div id="feature-quick-body" class="feature-quick-menu__body"></div>
+              <footer class="feature-quick-menu__foot">InfraGeo AM</footer>
+            </aside>
+          </div> 
+        </main>
+      </div>
+    </div>
+
+    <!-- Host oculto: selects usados como store pelo JS (UI de filtros fica no topbar). -->
+    <div id="menu-contract-host" class="visually-hidden" aria-hidden="true" hidden>
+      <select id="menu-select-mode" aria-label="Modo de seleção" tabindex="-1">
+        <option value="click">Clique</option>
+      </select>
+      <select id="menu-select-target" aria-label="Camada alvo para seleção" tabindex="-1">
+        <option value="auto">Auto (camada visível)</option>
+        <option value="bueiros">Bueiros BR-317</option>
+        <option value="pontes">Pontes BR-307</option>
+        <option value="jazidas">Jazidas BR-307</option>
+        <option value="hidrovias-am">Hidrovias</option>
+        <option value="ip4">IP4</option>
+        <option value="uc-estadual">UC Estadual</option>
+        <option value="uc-municipal">UC Municipal</option>
+        <option value="ti-am">TI AM</option>
+        <option value="pontes-br319">Pontes BR-319</option>
+        <option value="bueiros-br319">Bueiros BR-319</option>
+        <option value="pca-prads-br319">PCA - PRADS BR-319</option>
+        <option value="pca-prads-cmm-br319">PCA - PRADS CMM BR-319</option>
+        <option value="prads-br319">PRADS BR-319</option>
+        <option value="bueiros-br174">Bueiros BR-174</option>
+        <option value="prads-br174">PRADS BR-174</option>
+        <option value="bueiros-br230">Bueiros BR-230</option>
+        <option value="pontes-br230">Pontes BR-230</option>
+      </select>
+      <select id="menu-contract" aria-label="Contrato" tabindex="-1">
+        <option value="">Todos</option>
+      </select>
+    </div>
+
+    <!-- Resultado do filtro por município: camadas com feições naquele município -->
+    <div
+      id="municipio-filter-popup"
+      class="municipio-filter-popup"
+      role="status"
+      aria-live="polite"
+      hidden
+    ></div>
+
+    <!-- Leaflet JS -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <!-- Esri Leaflet (para mapas base Esri) -->
+    <script src="https://unpkg.com/esri-leaflet@3/dist/esri-leaflet.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
+

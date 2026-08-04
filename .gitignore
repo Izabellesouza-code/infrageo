@@ -1,0 +1,56 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual envs
+.venv/
+venv/
+ENV/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+**/desktop.ini
+
+# Runtime data (não versionar conteúdo gerado)
+logs/*
+!logs/.gitkeep
+data/cache/*
+!data/cache/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+uploads/incoming/*
+!uploads/incoming/.gitkeep
+uploads/processed/*
+!uploads/processed/.gitkeep
+uploads/failed/*
+!uploads/failed/.gitkeep
+storage/tmp/*
+!storage/tmp/.gitkeep
+storage/exports/*
+!storage/exports/.gitkeep
+
+# Build / deploy
+dist/
+build/
+node_modules/
+
+# Zip redundante da pasta assets/ (os shapefiles já estão em assets/)
+assets.zip

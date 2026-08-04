@@ -1,0 +1,41 @@
+services:
+  webgis:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: webgis_infrageo
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      INFRAGEO_ENV: ${INFRAGEO_ENV:-production}
+      PORT: "8000"
+    volumes:
+      - ../assets:/app/assets:ro
+    restart: unless-stopped
+
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: webgis_postgis
+    environment:
+      POSTGRES_DB: webgis
+      POSTGRES_USER: webgis
+      POSTGRES_PASSWORD: webgis
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+
+  geoserver:
+    image: kartoza/geoserver:2.24.2
+    container_name: webgis_geoserver
+    environment:
+      GEOSERVER_ADMIN_USER: admin
+      GEOSERVER_ADMIN_PASSWORD: geoserver
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgis
+
+volumes:
+  postgis_data:
+

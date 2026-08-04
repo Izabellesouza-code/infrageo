@@ -1,0 +1,31 @@
+services:
+  webgis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webgis_infrageo
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      INFRAGEO_ENV: ${INFRAGEO_ENV:-production}
+      PORT: "8000"
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-180}
+      GUNICORN_PRELOAD: ${GUNICORN_PRELOAD:-true}
+      INFRAGEO_BG_WARMUP: ${INFRAGEO_BG_WARMUP:-1}
+    volumes:
+      # Atualize shapefiles sem rebuild (somente leitura)
+      - ./assets:/app/assets:ro
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s

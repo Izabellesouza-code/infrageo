@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <!-- minimal pin -->
+  <path d="M32 6c-10.5 0-19 8.5-19 19 0 14.2 14.6 30.7 18 34.3a1.5 1.5 0 0 0 2.1 0C36.4 55.7 51 39.2 51 25 51 14.5 42.5 6 32 6Z" fill="#0b5bd3"/>
+  <!-- river line -->
+  <path d="M22 30c4.5-6 7 6 11 0s6.5 6 11 0" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/>
+  <!-- water underline -->
+  <path d="M24 36c4-3.5 6 3.5 10 0s6 3.5 10 0" stroke="#93c5fd" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/>
+</svg>
+

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <!-- Fundo: placa institucional -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#0f766e"/>
+  <rect x="8" y="8" width="48" height="48" rx="11" fill="#14b8a6" opacity=".22"/>
+  <!-- Tabuleiro da ponte -->
+  <path d="M10 34h44" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"/>
+  <!-- Arco (obra especial) -->
+  <path d="M14 34c2.5-12 10.5-18 18-18s15.5 6 18 18" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+  <!-- Pilares -->
+  <path d="M18 34v10M32 34v12M46 34v10" stroke="#ccfbf1" stroke-width="2.8" stroke-linecap="round"/>
+  <!-- Solo / água -->
+  <path d="M12 48h40" stroke="#99f6e4" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
+</svg>
