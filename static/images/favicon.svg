@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="InfraGeo AM">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#155e75"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- grade de mapa -->
+  <g stroke="rgba(255,255,255,.22)" stroke-width="1.5" fill="none">
+    <path d="M14 22h36M14 32h36M14 42h36"/>
+    <path d="M22 16v32M32 16v32M42 16v32"/>
+  </g>
+  <!-- contorno estilizado -->
+  <path
+    d="M18 28c2-8 10-12 16-8 4 2 8 1 11-2 2 6 1 14-4 19-4 4-10 6-15 4-5-2-9-7-8-13Z"
+    fill="rgba(255,255,255,.14)"
+    stroke="rgba(255,255,255,.35)"
+    stroke-width="1.5"
+  />
+  <!-- pin de localização -->
+  <path
+    d="M32 16.5c-6.2 0-11.2 5-11.2 11.2 0 8.4 11.2 19.8 11.2 19.8S43.2 36.1 43.2 27.7C43.2 21.5 38.2 16.5 32 16.5Z"
+    fill="#f8fafc"
+  />
+  <circle cx="32" cy="27.2" r="4.2" fill="#0f766e"/>
+</svg>
