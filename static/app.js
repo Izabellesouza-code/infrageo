@@ -13026,8 +13026,8 @@
       e.preventDefault();
       e.stopPropagation();
       if (!globalSearchFilterEl) return;
-      // O popup de filtros só fecha clicando fora (não fecha por toggle no botão).
       if (globalSearchFilterEl.hidden) openGlobalSearchFilter();
+      else closeGlobalSearchFilter();
     });
     globalSearchFilterEl?.addEventListener("click", (e) => {
       // Não deixar o clique "vazar" para o handler global (clique fora),

@@ -959,8 +959,8 @@ export function registerBindUi(app) {
         e.preventDefault();
         e.stopPropagation();
         if (!app.globalSearchFilterEl) return;
-        // O popup de filtros só fecha clicando fora (não fecha por toggle no botão).
         if (app.globalSearchFilterEl.hidden) app.openGlobalSearchFilter();
+        else app.closeGlobalSearchFilter();
       });
       app.globalSearchFilterEl?.addEventListener("click", (e) => {
         // Não deixar o clique "vazar" para o handler global (clique fora),
