@@ -841,6 +841,7 @@ export function registerBindUi(app) {
       let wasMobileLayout = app.isMobileLayoutActive();
       const syncMobileSidebarDefault = () => {
         const mobile = app.isMobileLayoutActive();
+        document.body.classList.toggle("is-mobile-layout", mobile);
         if (!mobile) {
           app.setMobileSidebarCollapsed(false);
           app.syncMobileSidebarChrome(false);
@@ -856,12 +857,30 @@ export function registerBindUi(app) {
           wasMobileLayout = mobile;
           syncMobileSidebarDefault();
         }
-        try {
-          app.state.map?.invalidateSize?.({ animate: false });
-        } catch {
-          // ignore
+        if (typeof app.invalidateMapSoon === "function") app.invalidateMapSoon();
+        else {
+          try {
+            app.state.map?.invalidateSize?.({ animate: false });
+          } catch {
+            // ignore
+          }
         }
       });
+      window.addEventListener("orientationchange", () => {
+        setTimeout(() => {
+          wasMobileLayout = app.isMobileLayoutActive();
+          syncMobileSidebarDefault();
+          if (typeof app.invalidateMapSoon === "function") app.invalidateMapSoon();
+        }, 180);
+      });
+      try {
+        if (window.visualViewport && typeof app.invalidateMapSoon === "function") {
+          window.visualViewport.addEventListener("resize", () => app.invalidateMapSoon());
+          window.visualViewport.addEventListener("scroll", () => app.invalidateMapSoon());
+        }
+      } catch {
+        // ignore
+      }
       app.mobileSidebarToggleBtn?.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -873,6 +892,17 @@ export function registerBindUi(app) {
         e.preventDefault();
         app.closeMobileSidebarIfNeeded();
       });
+      app.$("sidebar")?.addEventListener(
+        "change",
+        (e) => {
+          const t = e.target;
+          if (!(t instanceof HTMLInputElement)) return;
+          if (t.type !== "checkbox") return;
+          if (!app.isMobileLayoutActive()) return;
+          setTimeout(() => app.closeMobileSidebarIfNeeded(), 220);
+        },
+        { passive: true }
+      );
       document.addEventListener("keydown", (e) => {
         if (e.key !== "Escape") return;
         if (!app.isMobileLayoutActive()) return;

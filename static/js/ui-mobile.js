@@ -13,6 +13,7 @@ export function registerUiMobile(app) {
       const isCollapsed = Boolean(collapsed);
       const open = app.isMobileLayoutActive() && !isCollapsed;
       document.body.classList.toggle("mobile-sidebar-open", open);
+      document.body.classList.toggle("is-mobile-layout", app.isMobileLayoutActive());
       try {
         if (app.mobileSidebarBackdrop) {
           app.mobileSidebarBackdrop.hidden = !open;
@@ -48,6 +49,21 @@ export function registerUiMobile(app) {
   app.closeMobileSidebarIfNeeded = function closeMobileSidebarIfNeeded() {
       if (app.isMobileLayoutActive() && !document.body.classList.contains("mobile-sidebar-collapsed")) {
         app.setMobileSidebarCollapsed(true);
+      }
+    }
+
+  app.invalidateMapSoon = function invalidateMapSoon(delayMs = 80) {
+      try {
+        if (app._mapResizeTimer) clearTimeout(app._mapResizeTimer);
+        app._mapResizeTimer = setTimeout(() => {
+          try {
+            app.state.map?.invalidateSize?.({ animate: false });
+          } catch {
+            // ignore
+          }
+        }, delayMs);
+      } catch {
+        // ignore
       }
     }
 

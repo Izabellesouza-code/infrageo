@@ -49,6 +49,7 @@
     const isCollapsed = Boolean(collapsed);
     const open = isMobileLayoutActive() && !isCollapsed;
     document.body.classList.toggle("mobile-sidebar-open", open);
+    document.body.classList.toggle("is-mobile-layout", isMobileLayoutActive());
     try {
       if (mobileSidebarBackdrop) {
         mobileSidebarBackdrop.hidden = !open;
@@ -12894,8 +12895,24 @@
 
     // Mobile/tablet: drawer de camadas (mapa em tela cheia).
     let wasMobileLayout = isMobileLayoutActive();
+    let mapResizeTimer = null;
+    const invalidateMapSoon = () => {
+      try {
+        if (mapResizeTimer) clearTimeout(mapResizeTimer);
+        mapResizeTimer = setTimeout(() => {
+          try {
+            state.map?.invalidateSize?.({ animate: false });
+          } catch {
+            // ignore
+          }
+        }, 80);
+      } catch {
+        // ignore
+      }
+    };
     const syncMobileSidebarDefault = () => {
       const mobile = isMobileLayoutActive();
+      document.body.classList.toggle("is-mobile-layout", mobile);
       if (!mobile) {
         setMobileSidebarCollapsed(false);
         syncMobileSidebarChrome(false);
@@ -12911,12 +12928,24 @@
         wasMobileLayout = mobile;
         syncMobileSidebarDefault();
       }
-      try {
-        state.map?.invalidateSize?.({ animate: false });
-      } catch {
-        // ignore
-      }
+      invalidateMapSoon();
     });
+    window.addEventListener("orientationchange", () => {
+      // Aguarda a barra de URL / rotação estabilizar no mobile.
+      setTimeout(() => {
+        wasMobileLayout = isMobileLayoutActive();
+        syncMobileSidebarDefault();
+        invalidateMapSoon();
+      }, 180);
+    });
+    try {
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", invalidateMapSoon);
+        window.visualViewport.addEventListener("scroll", invalidateMapSoon);
+      }
+    } catch {
+      // ignore
+    }
     mobileSidebarToggleBtn?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -12928,6 +12957,19 @@
       e.preventDefault();
       closeMobileSidebarIfNeeded();
     });
+    // Fecha o drawer ao ligar/desligar uma camada (libera o mapa no celular).
+    $("sidebar")?.addEventListener(
+      "change",
+      (e) => {
+        const t = e.target;
+        if (!(t instanceof HTMLInputElement)) return;
+        if (t.type !== "checkbox") return;
+        if (!isMobileLayoutActive()) return;
+        // Pequeno atraso para o usuário ver o toggle antes do drawer fechar.
+        setTimeout(() => closeMobileSidebarIfNeeded(), 220);
+      },
+      { passive: true }
+    );
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if (!isMobileLayoutActive()) return;
