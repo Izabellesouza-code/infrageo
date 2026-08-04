@@ -33,12 +33,16 @@ Os shapefiles em `assets/` entram na imagem Docker (~100 MB).
 
 ### Limitações do Free
 
-- **512 MB RAM / 0.1 CPU** — GeoPandas + shapefiles grandes podem ficar lentos ou estourar memória
+- **512 MB RAM / 0.1 CPU** — GeoPandas + shapefiles grandes podem estourar memória (OOM → 502)
+- **Starter também tem 512 MB** — só aumenta CPU; **não resolve OOM**
 - Dorme após **~15 min** sem acesso; a 1ª abertura depois disso demora ~1 min (cold start)
 - **750 horas/mês** de instância Free por workspace
 - Sem disco persistente (os dados vão dentro da imagem Docker via `assets/`)
 
-Se travar ou cair por memória, suba para **Starter** no Dashboard (Settings → Instance Type).
+O Blueprint já liga `INFRAGEO_LOW_MEMORY=1` (libera caches e pula warm-up pesado). Isso reduz quedas, mas camadas muito grandes ainda podem OOM.
+
+Se continuar caindo por memória (**Ran out of memory / 512MB**), suba para **Standard (2 GB)** no Dashboard:
+**Settings → Instance Type → Standard**. Depois pode definir `INFRAGEO_LOW_MEMORY=0`.
 
 ### Passo a passo (Web Service manual)
 
@@ -67,7 +71,7 @@ Se travar ou cair por memória, suba para **Starter** no Dashboard (Settings →
 - Cada push na branch conectada gera um novo deploy automático.
 - Logs: Dashboard → serviço → **Logs**.
 - Se o health falhar: confira se `assets/` entrou na imagem e se `/health` responde 200.
-- Se faltar memória: suba o plano ou mantenha `WEB_CONCURRENCY=1`.
+- Se faltar memória: suba para **Standard (2 GB)** ou mantenha `INFRAGEO_LOW_MEMORY=1` + `WEB_CONCURRENCY=1`.
 
 ### Região
 

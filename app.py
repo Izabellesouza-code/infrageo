@@ -3,6 +3,7 @@ import hashlib
 import io
 import os
 import re
+import gc
 import gzip
 from pathlib import Path
 import tempfile
@@ -74,6 +75,21 @@ def _is_production() -> bool:
 
 
 IS_PRODUCTION = _is_production()
+
+
+def _low_memory_mode() -> bool:
+    """
+    Modo econômico de RAM (Render Free/Starter = 512 MB).
+    - INFRAGEO_LOW_MEMORY=1 força liga
+    - INFRAGEO_LOW_MEMORY=0 força desliga
+    - Sem variável: liga automaticamente no Render
+    """
+    raw = os.environ.get("INFRAGEO_LOW_MEMORY")
+    if raw is not None and raw.strip() != "":
+        return raw.strip().lower() in ("1", "true", "yes", "on")
+    return bool(os.environ.get("RENDER"))
+
+
 app.config["DEBUG"] = not IS_PRODUCTION
 app.config["TEMPLATES_AUTO_RELOAD"] = not IS_PRODUCTION
 app.jinja_env.auto_reload = not IS_PRODUCTION
@@ -177,6 +193,21 @@ def _security_headers(resp):
         return resp
 
 
+@app.after_request
+def _low_memory_release(resp):
+    """
+    No Render Free/Starter (512 MB), não acumular GeoJSON de várias camadas.
+    A resposta já foi montada; liberar caches evita OOM no próximo request.
+    """
+    try:
+        if _low_memory_mode():
+            # Função definida mais abaixo; chamada só em runtime.
+            _clear_geojson_caches()
+    except Exception:
+        pass
+    return resp
+
+
 def _find_project_root(start: Path) -> Path:
     """
     Encontra a raiz do projeto de forma portátil (Windows/Linux/macOS),
@@ -275,6 +306,47 @@ _limite_estadual_geojson_cache: dict | None = None
 
 # Geometria (shapely) do contorno do Amazonas para recortes (clip).
 _amazonas_boundary_geom_cache = None
+
+# Nomes dos caches GeoJSON em memória (para liberar RAM no Render Free).
+_GEOJSON_CACHE_GLOBALS = (
+    "_bueiros_br317_geojson_cache",
+    "_pontes_br307_geojson_cache",
+    "_bueiros_br307_geojson_cache",
+    "_jazidas_br307_geojson_cache",
+    "_jazidas_br307_points_geojson_cache",
+    "_ti_am_geojson_cache",
+    "_hidrovias_am_geojson_cache",
+    "_limite_estadual_geojson_cache",
+    "_bueiros_br174_geojson_cache",
+    "_prad_br174_geojson_cache",
+    "_bueiros_br230_geojson_cache",
+    "_pontes_br230_geojson_cache",
+    "_pontes_br319_geojson_cache",
+    "_bueiros_br319_geojson_cache",
+    "_pca_prads_br319_geojson_cache",
+    "_pca_prads_cmm_br319_geojson_cache",
+    "_prads_br319_geojson_cache",
+    "_uc_estadual_geojson_cache",
+    "_uc_municipal_geojson_cache",
+    "_limite_municipal_geojson_cache",
+    "_limite_municipal_polygons_geojson_cache",
+    "_ip4_geojson_cache",
+)
+
+
+def _clear_geojson_caches() -> None:
+    """Libera caches GeoJSON em memória (evita OOM em 512 MB)."""
+    global _geojson_cache, _amazonas_boundary_geom_cache
+    try:
+        _geojson_cache.clear()
+    except Exception:
+        _geojson_cache = {}
+    g = globals()
+    for name in _GEOJSON_CACHE_GLOBALS:
+        if name in g:
+            g[name] = None
+    _amazonas_boundary_geom_cache = None
+    gc.collect()
 
 
 def _get_amazonas_boundary_geom():
@@ -1104,7 +1176,7 @@ def _read_and_merge_shapefiles(shps: list[Path]) -> gpd.GeoDataFrame:
         causando nomes de municípios com '�'. Tentamos encodings comuns e escolhemos
         o que minimiza esse artefato.
         """
-        candidates: list[str | None] = [None, "utf-8", "latin1", "cp1252"]
+        candidates: list[str | None] = [None, "latin1", "cp1252"] if _low_memory_mode() else [None, "utf-8", "latin1", "cp1252"]
         best_gdf: gpd.GeoDataFrame | None = None
         best_score: int | None = None
         last_err: Exception | None = None
@@ -1129,8 +1201,14 @@ def _read_and_merge_shapefiles(shps: list[Path]) -> gpd.GeoDataFrame:
                     best_enc = enc
                     if score == 0:
                         break
+                else:
+                    del gdf
+                    if _low_memory_mode():
+                        gc.collect()
             except Exception as e:
                 last_err = e
+                if _low_memory_mode():
+                    gc.collect()
                 continue
 
         if best_gdf is None:
@@ -1406,9 +1484,15 @@ def _load_layer_geojson(layer_id: str) -> dict:
         # Garante serialização mesmo com valores não-JSON (ex.: Timestamp)
         # sem depender dos kwargs suportados por `GeoDataFrame.to_json()` na versão instalada.
         geojson = json.loads(json.dumps(gdf.__geo_interface__, default=str))
+        del gdf
+        if _low_memory_mode():
+            gc.collect()
     except Exception as e:
         abort(500, description=f"Failed to read shapefile: {e}")
 
+    if _low_memory_mode():
+        # Mantém no máximo 1 camada em cache para não estourar 512 MB.
+        _geojson_cache.clear()
     _geojson_cache[layer_id] = geojson
     return geojson
 
@@ -2827,6 +2911,7 @@ def health():
             "status": "ok",
             "env": _runtime_env(),
             "production": IS_PRODUCTION,
+            "low_memory": _low_memory_mode(),
             "assets_dir": str(ASSETS_DIR),
             "assets_exists": ASSETS_DIR.is_dir(),
             "layers_indexed": len(_layers_index or {}),
@@ -2846,6 +2931,21 @@ def _startup_warmup() -> None:
     except Exception:
         _layers_index = {}
 
+    # Warm-up do Limite Estadual consome muita RAM (GeoPandas + GeoJSON).
+    # No Render Free/Starter (512 MB) isso derruba a instância — pular e carregar sob demanda.
+    if _low_memory_mode() or os.environ.get("INFRAGEO_SKIP_LIMITE_WARMUP", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
+        try:
+            _geojson_cache.clear()
+        except Exception:
+            pass
+        gc.collect()
+        return
+
     # Warm-up: cacheia o Limite Estadual para evitar delay no 1º acesso.
     try:
         shp_path = _find_limite_estadual_shapefile()
@@ -2854,6 +2954,7 @@ def _startup_warmup() -> None:
             gdf = _ensure_wgs84(gdf)
             gdf = _limite_gdf_to_clean_state_outline(gdf)
             _limite_estadual_geojson_cache = json.loads(gdf.to_json())
+            del gdf
     except Exception:
         # Se falhar, mantém sob demanda (não derruba o servidor).
         pass
@@ -2863,6 +2964,7 @@ def _startup_warmup() -> None:
         _geojson_cache.clear()
     except Exception:
         pass
+    gc.collect()
 
 
 def _env_flag(name: str, default: bool = False) -> bool:

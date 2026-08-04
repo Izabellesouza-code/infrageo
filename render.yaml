@@ -3,6 +3,9 @@
 #
 # Deploy: Dashboard Render → New → Blueprint → selecione este repositório.
 # Ou: New → Web Service → Runtime Docker (raiz com Dockerfile).
+#
+# Memória: Free/Starter = 512 MB (GIS pode OOM). Para estabilidade use Standard (2 GB)
+# no Dashboard: Settings → Instance Type → Standard.
 
 services:
   - type: web
@@ -20,12 +23,18 @@ services:
         value: "1"
       - key: GUNICORN_TIMEOUT
         value: "180"
+      # false = evita pico de RAM no boot (importante em 512 MB)
       - key: GUNICORN_PRELOAD
-        value: "true"
+        value: "false"
       - key: GUNICORN_KEEPALIVE
         value: "5"
       - key: LOG_LEVEL
         value: info
       - key: INFRAGEO_BG_WARMUP
+        value: "1"
+      # Libera caches GeoJSON e pula warm-up pesado do limite estadual
+      - key: INFRAGEO_LOW_MEMORY
+        value: "1"
+      - key: INFRAGEO_SKIP_LIMITE_WARMUP
         value: "1"
       # PORT é definido automaticamente pelo Render — não fixe aqui.
