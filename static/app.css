@@ -2771,8 +2771,11 @@ body.theme-satellite .switch input:checked + .switch-ui{
 }
 
 @media (max-width: 980px){
-  /* Em telas onde a sidebar some, não precisa forçar 3 colunas */
-  .tool-grid--menu{ grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  /* Menu sempre em lista vertical — evita 2 colunas com texto cortado */
+  .tool-grid--menu{
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
 }
 
 .bottom-sheet{
@@ -4210,14 +4213,110 @@ body.theme-satellite:not(.theme-night){
     box-shadow: none;
   }
 
+  /* Menu: lista limpa, sem cards pesados nem texto cortado */
+  .sidebar-section--menu{
+    padding: 10px 10px 8px;
+    background: transparent;
+    border-color: rgba(15, 23, 42, .08);
+    box-shadow: none;
+  }
+  body.theme-night .sidebar-section--menu{
+    background: transparent;
+    border-color: rgba(148, 163, 184, .16);
+  }
+  .sidebar-section--menu .sidebar-section-head{
+    margin-bottom: 6px;
+  }
+  .sidebar-section--menu .sidebar-title{
+    font-size: 10px;
+    letter-spacing: .16em;
+    opacity: .85;
+  }
+  .sidebar-section--menu .tool-grid--menu{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
   .sidebar-section--menu .sidebar-action-btn{
-    min-height: var(--touch-min);
-    padding: 12px 14px;
-    font-size: 14px;
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 650;
+    gap: 10px;
+    border-radius: 10px;
+    border: 0;
+    background: rgba(15, 23, 42, .04);
+    box-shadow: none;
+    margin-top: 0 !important;
+  }
+  .sidebar-section--menu .sidebar-action-btn + .sidebar-action-btn{
+    margin-top: 0;
+  }
+  .sidebar-section--menu .sidebar-action-btn:hover,
+  .sidebar-section--menu .sidebar-action-btn:active{
+    background: rgba(13, 148, 136, .10);
+  }
+  body.theme-night .sidebar-section--menu .sidebar-action-btn{
+    background: rgba(148, 163, 184, .08);
+    border: 0;
+  }
+  body.theme-night .sidebar-section--menu .sidebar-action-btn:hover,
+  body.theme-night .sidebar-section--menu .sidebar-action-btn:active{
+    background: rgba(45, 212, 191, .12);
   }
   .sidebar-section--menu .sidebar-action-icon{
-    width: 40px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+  }
+  .sidebar-section--menu .sidebar-action-icon svg{
+    width: 18px;
+    height: 18px;
+  }
+  .sidebar-section--menu .sidebar-action-text{
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.25;
+  }
+
+  /* Camadas: menos “caixas” empilhadas */
+  .sidebar-section--layers{
+    padding: 10px;
+    gap: 6px;
+  }
+  .sidebar-section--layers .sidebar-section-head{
+    margin-bottom: 4px;
+  }
+  .layer-group-heading,
+  .layer-group-heading--toggle{
+    padding: 8px 8px;
+    border-radius: 10px;
+    border-color: transparent;
+    background: rgba(15, 23, 42, .035);
+    margin-bottom: 2px;
+  }
+  body.theme-night .layer-group-heading,
+  body.theme-night .layer-group-heading--toggle{
+    background: rgba(148, 163, 184, .07);
+    border-color: transparent;
+  }
+  .layer-group-heading-chevron{
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+  }
+  .layer-group + .layer-group{
+    margin-top: 2px;
+  }
+  .camadas-foot{
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    box-shadow: none;
   }
 
   .sidebar-layers-scroll{
