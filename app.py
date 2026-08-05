@@ -935,6 +935,7 @@ def _sanitize_gdf_for_json(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     GeoJSON precisa ser JSON-serializável. Alguns shapefiles trazem campos datetime
     como pandas.Timestamp, que quebram o to_json().
+    Em low-memory: remove colunas vazias e simplifica geometrias (menos RAM/payload).
     """
     if gdf is None or gdf.empty:
         return gdf
@@ -955,7 +956,51 @@ def _sanitize_gdf_for_json(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
                 )
         except Exception:
             continue
+
+    if _low_memory_mode():
+        try:
+            # Remove colunas totalmente vazias (reduz JSON).
+            drop_cols = []
+            for col in list(out.columns):
+                if col == out.geometry.name:
+                    continue
+                try:
+                    if out[col].isna().all():
+                        drop_cols.append(col)
+                except Exception:
+                    continue
+            if drop_cols:
+                out = out.drop(columns=drop_cols, errors="ignore")
+        except Exception:
+            pass
+        try:
+            # ~30–40 m em graus; reduz vértices de polígonos grandes (TI/UC/limites).
+            tol = float(os.environ.get("INFRAGEO_SIMPLIFY_TOLERANCE", "0.00035") or "0.00035")
+            if tol > 0 and out.geometry is not None:
+                out = out.set_geometry(out.geometry.simplify(tol, preserve_topology=True))
+        except Exception:
+            pass
+        try:
+            gc.collect()
+        except Exception:
+            pass
     return out
+
+
+def _gdf_to_geojson_dict(gdf: gpd.GeoDataFrame) -> dict:
+    """Serializa GeoDataFrame → dict GeoJSON com pico de RAM menor no modo econômico."""
+    gdf = _sanitize_gdf_for_json(gdf)
+    try:
+        raw = gdf.to_json()
+    except Exception:
+        raw = json.dumps(gdf.__geo_interface__, default=str)
+    try:
+        del gdf
+    except Exception:
+        pass
+    if _low_memory_mode():
+        gc.collect()
+    return json.loads(raw)
 
 
 def _is_limite_layer_shapefile(shp_path: Path) -> bool:
@@ -1176,7 +1221,7 @@ def _read_and_merge_shapefiles(shps: list[Path]) -> gpd.GeoDataFrame:
         causando nomes de municípios com '�'. Tentamos encodings comuns e escolhemos
         o que minimiza esse artefato.
         """
-        candidates: list[str | None] = [None, "latin1", "cp1252"] if _low_memory_mode() else [None, "utf-8", "latin1", "cp1252"]
+        candidates: list[str | None] = [None, "latin1"] if _low_memory_mode() else [None, "utf-8", "latin1", "cp1252"]
         best_gdf: gpd.GeoDataFrame | None = None
         best_score: int | None = None
         last_err: Exception | None = None
@@ -1214,10 +1259,9 @@ def _read_and_merge_shapefiles(shps: list[Path]) -> gpd.GeoDataFrame:
         if best_gdf is None:
             raise last_err or RuntimeError(f"Falha ao ler shapefile: {shp_path}")
 
-        # Se ainda houver caracteres de substituição (�), tenta re-ler SOMENTE o DBF via pyshp
-        # com encodings pt-BR comuns, e substitui valores no gdf.
+        # Releitura DBF via pyshp dobra a RAM — pular no Render Free.
         try:
-            if best_score and best_score > 0:
+            if best_score and best_score > 0 and not _low_memory_mode():
                 best_rows = None
                 best_fields = None
                 best_dbf_score = None
@@ -1479,21 +1523,13 @@ def _load_layer_geojson(layer_id: str) -> dict:
         gdf = _ensure_wgs84(gdf)
         if _is_limite_layer_shapefile(shp_path):
             gdf = _limite_gdf_to_clean_state_outline(gdf)
-        # Recorte ao Amazonas para camadas que extrapolam o estado (casos específicos)
-        gdf = _sanitize_gdf_for_json(gdf)
-        # Garante serialização mesmo com valores não-JSON (ex.: Timestamp)
-        # sem depender dos kwargs suportados por `GeoDataFrame.to_json()` na versão instalada.
-        geojson = json.loads(json.dumps(gdf.__geo_interface__, default=str))
-        del gdf
-        if _low_memory_mode():
-            gc.collect()
+        geojson = _gdf_to_geojson_dict(gdf)
     except Exception as e:
         abort(500, description=f"Failed to read shapefile: {e}")
 
-    if _low_memory_mode():
-        # Mantém no máximo 1 camada em cache para não estourar 512 MB.
-        _geojson_cache.clear()
-    _geojson_cache[layer_id] = geojson
+    # Em low-memory não retém cache (o after_request também limpa).
+    if not _low_memory_mode():
+        _geojson_cache[layer_id] = geojson
     return geojson
 
 

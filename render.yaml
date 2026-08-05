@@ -37,4 +37,10 @@ services:
         value: "1"
       - key: INFRAGEO_SKIP_LIMITE_WARMUP
         value: "1"
+      # Índice sob demanda (economiza RAM no boot)
+      - key: INFRAGEO_SKIP_INDEX
+        value: "1"
+      # Simplifica geometrias no modo low-memory (~30–40 m)
+      - key: INFRAGEO_SIMPLIFY_TOLERANCE
+        value: "0.00035"
       # PORT é definido automaticamente pelo Render — não fixe aqui.
