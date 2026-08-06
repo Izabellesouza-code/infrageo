@@ -28,9 +28,9 @@ Os shapefiles em `assets/` entram na imagem Docker (~100 MB).
 6. Aguarde o build Docker (pode levar vários minutos na 1ª vez: GDAL + pip + assets).
 7. Quando o status ficar **Live**, abra a URL pública (ex.: `https://webgis-infrageo.onrender.com`).
 8. Valide:
-   - `https://SEU-SERVICO.onrender.com/health` — `"status":"ok"`, `"api_only":true`
-   - `https://SEU-SERVICO.onrender.com/` — JSON da API (não o mapa)
-   - Mapa: https://infrageo-webgis.vercel.app
+   - `https://SEU-SERVICO.onrender.com/` — mapa (splash + WebGIS)
+   - `https://SEU-SERVICO.onrender.com/health` — `"status":"ok"` e `"assets_exists":true`
+   - Espelho opcional no Vercel: https://infrageo-webgis.vercel.app
 
 ### Limitações do Free
 
@@ -104,10 +104,10 @@ gunicorn -c gunicorn.conf.py app:app
 
 ---
 
-## 4) Frontend no Vercel + API no Render
+## 4) Frontend no Vercel + Render completo
 
-Em produção o Render roda **só a API** (`INFRAGEO_API_ONLY=1`): `/` devolve JSON e não serve o mapa.
-A UI fica no Vercel; o `vercel.json` faz proxy de `/layers`, `/data`, etc. para o Render.
+Por padrão o Render serve **mapa + API** (`INFRAGEO_API_ONLY=0`), como antes.
+Opcionalmente a mesma UI pode ir ao Vercel (build abaixo); o `vercel.json` faz proxy das rotas de dados para o Render.
 
 1. Build estático:
    ```bash

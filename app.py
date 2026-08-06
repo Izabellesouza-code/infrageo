@@ -72,11 +72,11 @@ def _is_production() -> bool:
 
 
 def _api_only_mode() -> bool:
-    """Render/produção: só API. Local: UI Flask, a menos que INFRAGEO_API_ONLY=1."""
+    """Só API quando INFRAGEO_API_ONLY=1. Padrão: UI + API (como antes)."""
     raw = os.environ.get("INFRAGEO_API_ONLY")
     if raw is not None and raw.strip() != "":
         return raw.strip().lower() in ("1", "true", "yes", "on")
-    return _is_production()
+    return False
 
 
 def _frontend_url() -> str:
