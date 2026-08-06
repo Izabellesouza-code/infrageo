@@ -11321,8 +11321,8 @@
       className: "selected-feature",
     };
     const polyHighlightStyle = {
-      color: "#ffd000",
-      weight: 5,
+      color: "#f59e0b",
+      weight: 3,
       fillColor: "#ffd000",
       fillOpacity: 0.35,
       className: "selected-feature",
