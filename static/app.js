@@ -4855,6 +4855,11 @@
     document.body.classList.remove("has-loading-splash");
     el.classList.add("app-loading-splash--hidden");
     el.style.display = "none";
+    // Splash saiu: o container do mapa pode ter mudado de tamanho.
+    requestAnimationFrame(() => {
+      refreshMapSize();
+      fitMapToStateBoundaryNow();
+    });
   }
 
   /** Limite estadual: envia para trás do mapa base só se a camada estiver no mapa. */
@@ -5053,13 +5058,38 @@
     return toggles.every((t) => Boolean(t.checked));
   }
 
+  /** Recalcula o tamanho do Leaflet (evita faixa cinza / mapa cortado). */
+  function refreshMapSize() {
+    if (!state.map?.invalidateSize) return;
+    try {
+      state.map.invalidateSize({ animate: false });
+    } catch {
+      // ignore
+    }
+  }
+
   /** Enquadra no shapefile de limite estadual, sem animação. */
   function fitMapToStateBoundaryNow() {
     if (!state.map) return;
-    const bb = state.boundaryLayer?.getBounds?.();
-    if (!bb?.isValid?.()) return;
-    state.map.fitBounds(bb, { animate: false, duration: 0, padding: [24, 24] });
-    bringLimiteEstadualToBackIfVisible();
+    refreshMapSize();
+    const run = () => {
+      refreshMapSize();
+      const bb = state.boundaryLayer?.getBounds?.();
+      if (bb?.isValid?.()) {
+        state.map.fitBounds(bb, {
+          animate: false,
+          duration: 0,
+          padding: [28, 28],
+          maxZoom: 8,
+        });
+      } else {
+        // Fallback enquanto o limite ainda não carregou.
+        state.map.setView([-4.5, -63], 6, { animate: false });
+      }
+      bringLimiteEstadualToBackIfVisible();
+    };
+    // Dois frames: garante layout CSS (mobile/drawer) antes do fitBounds.
+    requestAnimationFrame(() => requestAnimationFrame(run));
   }
 
   function escapeHtml(text) {
@@ -13077,7 +13107,7 @@
         if (mapResizeTimer) clearTimeout(mapResizeTimer);
         mapResizeTimer = setTimeout(() => {
           try {
-            state.map?.invalidateSize?.({ animate: false });
+            refreshMapSize();
           } catch {
             // ignore
           }
@@ -13086,6 +13116,15 @@
         // ignore
       }
     };
+    try {
+      const wrap = document.querySelector(".map-wrap");
+      if (wrap && typeof ResizeObserver !== "undefined") {
+        const ro = new ResizeObserver(() => invalidateMapSoon());
+        ro.observe(wrap);
+      }
+    } catch {
+      // ignore
+    }
     const syncMobileSidebarDefault = () => {
       const mobile = isMobileLayoutActive();
       document.body.classList.toggle("is-mobile-layout", mobile);
@@ -13702,6 +13741,8 @@
     menuFitAmazonasBtn?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      closeMobileSidebarIfNeeded();
+      refreshMapSize();
       fitMapToStateBoundaryNow();
     });
 
@@ -14707,6 +14748,8 @@
     void attachLimiteEstadualLayerIfNeeded().finally(() => {
       applyLimiteEstadualVisibility();
       bringLimiteEstadualToBackIfVisible();
+      refreshMapSize();
+      fitMapToStateBoundaryNow();
     });
 
     // Estado inicial: somente Limite Estadual ligado (todas as camadas de dados desligadas).
