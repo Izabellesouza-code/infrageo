@@ -434,6 +434,10 @@ button, input, select, textarea{
   max-width: min(200px, 42vw);
   object-fit: contain;
   object-position: left center;
+  background: #fff;
+  border-radius: 8px;
+  padding: 3px 6px;
+  box-sizing: content-box;
 }
 .brand-title{ font-weight: 700; letter-spacing: .01em; }
 .brand-subtitle{ font-size: 12px; color: var(--muted); margin-top: 1px; }

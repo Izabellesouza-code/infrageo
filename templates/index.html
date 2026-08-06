@@ -46,7 +46,7 @@
     <link
       rel="preload"
       as="image"
-      href="{{ url_for('static', filename='images/infra_geo_splash.png') }}"
+      href="{{ url_for('static', filename='images/infra_geo_splash.png') }}?v=2"
       fetchpriority="high"
     />
   </head>
@@ -63,7 +63,7 @@
       <div class="app-loading-splash__inner">
         <img
           class="app-loading-splash__logo"
-          src="{{ url_for('static', filename='images/infra_geo_splash.png') }}"
+          src="{{ url_for('static', filename='images/infra_geo_splash.png') }}?v=2"
           alt="InfraGEO — Produto 05 — Meio Ambiente"
           width="360"
           height="200"
@@ -92,11 +92,12 @@
           >
             <img
               class="brand-logo"
-              src="{{ url_for('static', filename='images/logo-consorcio-spu.png') }}"
+              src="{{ url_for('static', filename='images/logo-consorcio-spu.png') }}?v=3"
               alt="Consórcio SPU"
-              width="200"
-              height="40"
+              width="143"
+              height="80"
               decoding="async"
+              loading="eager"
             />
           </a>
           <div class="brand-text">
