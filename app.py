@@ -1195,6 +1195,17 @@ def _read_and_merge_shapefiles(shps: list[Path]) -> gpd.GeoDataFrame:
     if not shps:
         return gpd.GeoDataFrame({"geometry": []}, geometry="geometry", crs="EPSG:4326")
 
+    def _sidecar_geojson(shp_path: Path) -> Path | None:
+        """Prefere .geojson irmão do .shp quando existir (conversão offline)."""
+        for ext in (".geojson", ".json"):
+            p = shp_path.with_suffix(ext)
+            try:
+                if p.is_file() and p.stat().st_size > 20:
+                    return p
+            except Exception:
+                continue
+        return None
+
     def _bad_decode_score(gdf: gpd.GeoDataFrame) -> int:
         """
         Heurística simples para escolher encoding ao ler DBF:
@@ -1220,7 +1231,16 @@ def _read_and_merge_shapefiles(shps: list[Path]) -> gpd.GeoDataFrame:
         Alguns shapefiles vêm com .cpg incorreto (ex.: UTF-8 mas DBF em latin-1),
         causando nomes de municípios com '�'. Tentamos encodings comuns e escolhemos
         o que minimiza esse artefato.
+        Se existir .geojson ao lado do .shp, usa o GeoJSON (mais leve no deploy).
         """
+        gj = _sidecar_geojson(shp_path)
+        if gj is not None:
+            try:
+                gdf = gpd.read_file(gj)
+                return gdf
+            except Exception:
+                pass
+
         candidates: list[str | None] = [None, "latin1"] if _low_memory_mode() else [None, "utf-8", "latin1", "cp1252"]
         best_gdf: gpd.GeoDataFrame | None = None
         best_score: int | None = None
