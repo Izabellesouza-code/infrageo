@@ -421,6 +421,8 @@
     municipioFilter: "",
     /** Filtro (texto) dentro da lista de municípios do painel Filtros. */
     municipioUiFilterText: "",
+    /** Filtro (texto) dentro da lista de contratos do painel Filtros. */
+    contractUiFilterText: "",
     /** Nomes de municípios para o painel Filtros (lista leve, sem montar Leaflet). */
     municipioFilterOptions: [],
     municipioFilterListLoaded: false,
@@ -5124,18 +5126,22 @@
     return false;
   }
 
-  /** Coluna canônica de contrato nas tabelas de atributos (case-sensitive). */
-  const CONTRACT_ATTR_COLUMN = "contratos";
+  /** Colunas de contrato aceitas nos GeoJSON (case-insensitive). */
+  const CONTRACT_ATTR_KEYS = new Set(["contrato", "contratos"]);
 
   function isContratoColumnKey(key) {
-    // Case-sensitive: só a coluna exatamente "contratos".
-    return String(key || "").trim() === CONTRACT_ATTR_COLUMN;
+    const k = String(key || "").trim().toLowerCase();
+    // Aceita contrato/contratos. Exclui "contratada" (empresa).
+    return CONTRACT_ATTR_KEYS.has(k);
   }
 
   function contractKeyCandidates(props) {
     if (!props || typeof props !== "object") return [];
-    if (!Object.prototype.hasOwnProperty.call(props, CONTRACT_ATTR_COLUMN)) return [];
-    return [CONTRACT_ATTR_COLUMN];
+    const out = [];
+    for (const k of Object.keys(props)) {
+      if (isContratoColumnKey(k)) out.push(k);
+    }
+    return out;
   }
 
   function looksLikeContractValue(raw) {
@@ -5186,7 +5192,7 @@
     const out = [];
     const seen = new Set();
 
-    // Regra: somente a coluna "contratos" (case-sensitive).
+    // Colunas contrato/contratos (qualquer capitalização) nos GeoJSON.
     const candidates = contractKeyCandidates(props);
     for (const k of candidates) {
       const vals = parseContractValues(props?.[k]);
@@ -5625,7 +5631,6 @@
 
   function collectSortedContractValues() {
     const allSets = getContractLayerFeatureSets();
-    // Não incluir `extraContractSources` no dropdown (podem não ter tabela no UI).
     const mergedByKey = new Map();
     for (const feats of allSets) {
       for (const f of feats || []) {
@@ -6351,10 +6356,19 @@
       return;
     }
 
+    const prevInput = panel.querySelector?.("#global-search-filter-contract-input");
+    const prevFocused = document.activeElement === prevInput;
+    const prevSelStart = prevInput?.selectionStart;
+    const prevSelEnd = prevInput?.selectionEnd;
+
     const current = normalizeContractValue(state.contractFilter);
     const currentKey = normalizeContractKey(current);
     const isLoading = Boolean(state.contractSourcesLoadPromise) && !state.contractSourcesLoaded;
-    const { sorted } = collectSortedContractValues();
+    const { sorted: allSorted } = collectSortedContractValues();
+    const q = normalizeSearchText(state.contractUiFilterText || "");
+    const sorted = q
+      ? allSorted.filter((v) => normalizeContractKey(v).includes(q) || normalizeSearchText(v).includes(q))
+      : allSorted;
 
     const optsHtml = [
       {
@@ -6378,10 +6392,12 @@
       .join("");
 
     let bodyHtml = optsHtml;
-    if (isLoading && sorted.length === 0) {
+    if (isLoading && allSorted.length === 0) {
       bodyHtml = `<div class="global-search-filter__contract-empty">Carregando contratos…</div>`;
-    } else if (state.contractSourcesAttempted && sorted.length === 0) {
+    } else if (state.contractSourcesAttempted && allSorted.length === 0) {
       bodyHtml = `<div class="global-search-filter__contract-empty">Sem contratos disponíveis.</div>`;
+    } else if (!isLoading && allSorted.length > 0 && sorted.length === 0) {
+      bodyHtml = `<div class="global-search-filter__contract-empty">Nenhum contrato encontrado.</div>`;
     }
 
     panel.innerHTML = `
@@ -6389,10 +6405,36 @@
         <div class="global-search-filter__contract-title">Contrato</div>
         <div class="global-search-filter__contract-current">${escapeHtml(current || "Todos")}</div>
       </div>
+      <label class="global-search-filter__contract-filter">
+        <input
+          id="global-search-filter-contract-input"
+          class="global-search-filter__contract-input"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Buscar contrato…"
+          aria-label="Buscar contrato"
+          value="${escapeHtml(state.contractUiFilterText || "")}"
+        />
+      </label>
       <div class="global-search-filter__contract-list" role="listbox" aria-label="Contratos">
         ${bodyHtml}
       </div>
     `;
+
+    if (prevFocused) {
+      const input = panel.querySelector?.("#global-search-filter-contract-input");
+      if (input) {
+        try {
+          input.focus({ preventScroll: true });
+          if (typeof prevSelStart === "number" && typeof prevSelEnd === "number") {
+            input.setSelectionRange(prevSelStart, prevSelEnd);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
 
     if (!state.contractSourcesLoaded) {
       void ensureContractSourcesLoaded().then(() => {
@@ -6422,59 +6464,33 @@
     state.contractSourcesLoadPromise = (async () => {
       state.contractSourcesAttempted = true;
 
-      // Carrega sob demanda (apenas para montar lista de contratos e contagens do popup).
-      if (!state.bueirosFeatures.length) {
-        state.bueirosFeatures = await fetchGeojsonFeatures("/layers/bueiros-br317", "_bueirosIndex");
-      }
-      if (!state.pontesFeatures.length) {
-        state.pontesFeatures = await fetchGeojsonFeatures("/layers/pontes-br307", "_pontesIndex");
-      }
-      if (!state.jazidasFeatures.length) {
-        // Jazidas: o endpoint principal pode ser pesado, mas precisamos de properties para contrato.
-        state.jazidasFeatures = await fetchGeojsonFeatures("/layers/jazidas-br307", "_jazidasIndex");
-      }
-      if (!state.bueirosBr174Features.length) {
-        state.bueirosBr174Features = await fetchGeojsonFeatures("/layers/bueiros-br174", "_bueirosBr174Index");
-      }
-      if (!state.pradsBr174Features.length) {
-        state.pradsBr174Features = await fetchGeojsonFeatures("/layers/prads-br174", "_pradsBr174Index");
-      }
-      if (!state.pcaPradsBr319Features.length) {
-        state.pcaPradsBr319Features = await fetchGeojsonFeatures("/layers/pca-prads-br319", "_pcaPradsBr319Index");
-      }
-      if (!state.pradsBr319Features.length) {
-        state.pradsBr319Features = await fetchGeojsonFeatures("/layers/prads-br319", "_pradsBr319Index");
-      }
-      if (!state.pcaPradsCmmBr319Features.length) {
-        state.pcaPradsCmmBr319Features = await fetchGeojsonFeatures("/layers/pca-prads-cmm-br319", "_pcaPradsCmmBr319Index");
-      }
-      if (!state.bueirosBr230Features.length) {
-        state.bueirosBr230Features = await fetchGeojsonFeatures("/layers/bueiros-br230", "_bueirosBr230Index");
-      }
-      if (!state.pontesBr319Features.length) {
-        state.pontesBr319Features = await fetchGeojsonFeatures("/layers/pontes-br319", "_pontesBr319Index");
-      }
-      if (!state.pontesBr230Features.length) {
-        state.pontesBr230Features = await fetchGeojsonFeatures("/layers/pontes-br230", "_pontesBr230Index");
-      }
-      if (!state.bueirosBr319Features.length) {
-        state.bueirosBr319Features = await fetchGeojsonFeatures("/layers/bueiros-br319", "_bueirosBr319Index");
-      }
-      if (!state.ucEstadualFeatures.length) {
-        state.ucEstadualFeatures = await fetchGeojsonFeatures("/layers/uc-estadual", "_ucEstadualIndex");
-      }
-      if (!state.ucMunicipalFeatures.length) {
-        state.ucMunicipalFeatures = await fetchGeojsonFeatures("/layers/uc-municipal", "_ucMunicipalIndex");
-      }
-      if (!state.ip4Features.length) {
-        state.ip4Features = await fetchGeojsonFeatures("/layers/ip4", "_ip4Index");
-      }
-      if (!state.tiAmFeatures.length) {
-        state.tiAmFeatures = await fetchGeojsonFeatures("/layers/ti-am", "_tiAmIndex");
-      }
-      if (!state.hidroviasAmFeatures.length) {
-        state.hidroviasAmFeatures = await fetchGeojsonFeatures("/layers/hidrovias-am", "_hidroviasAmIndex");
-      }
+      // Carrega em paralelo (só properties/features para montar a lista de contratos).
+      const loaders = [
+        ["bueirosFeatures", "/layers/bueiros-br317", "_bueirosIndex"],
+        ["pontesFeatures", "/layers/pontes-br307", "_pontesIndex"],
+        ["jazidasFeatures", "/layers/jazidas-br307", "_jazidasIndex"],
+        ["bueirosBr174Features", "/layers/bueiros-br174", "_bueirosBr174Index"],
+        ["pradsBr174Features", "/layers/prads-br174", "_pradsBr174Index"],
+        ["pcaPradsBr319Features", "/layers/pca-prads-br319", "_pcaPradsBr319Index"],
+        ["pradsBr319Features", "/layers/prads-br319", "_pradsBr319Index"],
+        ["pcaPradsCmmBr319Features", "/layers/pca-prads-cmm-br319", "_pcaPradsCmmBr319Index"],
+        ["bueirosBr230Features", "/layers/bueiros-br230", "_bueirosBr230Index"],
+        ["pontesBr319Features", "/layers/pontes-br319", "_pontesBr319Index"],
+        ["pontesBr230Features", "/layers/pontes-br230", "_pontesBr230Index"],
+        ["bueirosBr319Features", "/layers/bueiros-br319", "_bueirosBr319Index"],
+        ["ucEstadualFeatures", "/layers/uc-estadual", "_ucEstadualIndex"],
+        ["ucMunicipalFeatures", "/layers/uc-municipal", "_ucMunicipalIndex"],
+        ["ip4Features", "/layers/ip4", "_ip4Index"],
+        ["tiAmFeatures", "/layers/ti-am", "_tiAmIndex"],
+        ["hidroviasAmFeatures", "/layers/hidrovias-am", "_hidroviasAmIndex"],
+      ];
+
+      await Promise.all(
+        loaders.map(async ([stateKey, url, indexField]) => {
+          if (state[stateKey]?.length) return;
+          state[stateKey] = await fetchGeojsonFeatures(url, indexField);
+        })
+      );
 
     async function tryLoadDiscoveredLayerByName(matchA, matchB, label) {
       try {
@@ -6504,57 +6520,54 @@
     // Bueiros BR-307: tenta achar por auto-discovery (assets/BR-307/**BUEIROS*.shp)
     await tryLoadDiscoveredLayerByName(/br-?307/i, /buei/gi, "Bueiros BR-307");
 
-    // Descoberta genérica: adiciona qualquer camada em /layers com coluna exatamente "contratos" (case-sensitive).
+    // Descoberta genérica: camadas em /layers com coluna contrato/contratos.
     try {
       const rr = await fetch("/layers");
       if (rr.ok) {
         const payload = await rr.json();
         const items = payload?.layers || [];
+        const candidates = [];
         for (const it of items) {
           const name = String(it?.name || "");
-          // ignora limites
           if (/limite/i.test(name)) continue;
-          // ignora "segmentos" (camada não existe mais no filtro de contrato)
           if (/segmentos/i.test(name)) continue;
-          // ignora camadas já atendidas por endpoints dedicados (evita duplicar no popup)
           if (looksLikeKnownDedicatedLayer(name)) continue;
           const id = it?.id;
           if (!id) continue;
-          const label = name.replace(/\.shp$/i, "");
-          const dedupeKey = normalizeContractLayerDedupeKey(label);
-          if (!state.extraContractSources) state.extraContractSources = [];
-          const existingIdx = state.extraContractSources.findIndex((s) => s?.dedupeKey === dedupeKey);
-          const r2 = await fetch(`/layers/${id}`);
-          if (!r2.ok) continue;
-          const data = await r2.json();
-          const feats = (data.features || []).map((f, i) => ({ ...f, _extraIndex: i }));
-          if (!feats.length) continue;
-          // Só entra se existir coluna exatamente "contratos" em pelo menos uma feição
-          const has = feats.some((f) => featureHasContractColumn(f));
-          if (!has) continue;
-          const next = { label, dedupeKey, features: feats };
-          if (existingIdx >= 0) {
-            // Mantém somente uma (substitui pela última encontrada -> fica a "de baixo")
-            state.extraContractSources[existingIdx] = next;
-          } else {
-            state.extraContractSources.push(next);
-          }
+          candidates.push({ id, name });
         }
+        // Limita descoberta genérica para não travar o painel.
+        const capped = candidates.slice(0, 24);
+        await Promise.all(
+          capped.map(async ({ id, name }) => {
+            try {
+              const label = name.replace(/\.shp$/i, "");
+              const dedupeKey = normalizeContractLayerDedupeKey(label);
+              if (!state.extraContractSources) state.extraContractSources = [];
+              const existingIdx = state.extraContractSources.findIndex((s) => s?.dedupeKey === dedupeKey);
+              const r2 = await fetch(`/layers/${id}`);
+              if (!r2.ok) return;
+              const data = await r2.json();
+              const feats = (data.features || []).map((f, i) => ({ ...f, _extraIndex: i }));
+              if (!feats.length) return;
+              const has = feats.some((f) => featureHasContractColumn(f));
+              if (!has) return;
+              const next = { label, dedupeKey, features: feats };
+              if (existingIdx >= 0) state.extraContractSources[existingIdx] = next;
+              else state.extraContractSources.push(next);
+            } catch {
+              // ignore
+            }
+          })
+        );
       }
     } catch {
       // ignore
     }
 
       refreshContractOptions();
-      // Só considera "carregado" quando existe pelo menos 1 contrato além de "Todos".
-      // Se continuar vazio (endpoints indisponíveis / sem coluna contrato), mantemos como não carregado
-      // para permitir retry automático ao abrir/digitar.
-      try {
-        const optLen = menuContractSelect?.options?.length || 0;
-        state.contractSourcesLoaded = optLen > 1;
-      } catch {
-        state.contractSourcesLoaded = false;
-      }
+      // Marca carregado após a tentativa (mesmo se lista vazia) para não ficar em loop.
+      state.contractSourcesLoaded = true;
     })();
 
     try {
@@ -13408,10 +13421,17 @@
     });
 
     globalSearchFilterEl?.addEventListener("input", (e) => {
-      const input = e.target?.closest?.("#global-search-filter-municipio-input");
-      if (!input || !globalSearchFilterEl?.contains?.(input)) return;
-      state.municipioUiFilterText = input.value || "";
-      renderGlobalSearchMunicipiosPanel();
+      const municipioInput = e.target?.closest?.("#global-search-filter-municipio-input");
+      if (municipioInput && globalSearchFilterEl?.contains?.(municipioInput)) {
+        state.municipioUiFilterText = municipioInput.value || "";
+        renderGlobalSearchMunicipiosPanel();
+        return;
+      }
+      const contractInput = e.target?.closest?.("#global-search-filter-contract-input");
+      if (contractInput && globalSearchFilterEl?.contains?.(contractInput)) {
+        state.contractUiFilterText = contractInput.value || "";
+        renderGlobalSearchContractsPanel();
+      }
     });
 
     globalSearchResultsEl?.addEventListener("click", (e) => {

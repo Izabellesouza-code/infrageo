@@ -56,17 +56,20 @@ export function registerContracts(app) {
       return false;
     }
 
-  app.CONTRACT_ATTR_COLUMN = "contratos";
+  app.CONTRACT_ATTR_KEYS = new Set(["contrato", "contratos"]);
 
   app.isContratoColumnKey = function isContratoColumnKey(key) {
-      // Case-sensitive: só a coluna exatamente "contratos".
-      return String(key || "").trim() === app.CONTRACT_ATTR_COLUMN;
+      const k = String(key || "").trim().toLowerCase();
+      return app.CONTRACT_ATTR_KEYS.has(k);
     }
 
   app.contractKeyCandidates = function contractKeyCandidates(props) {
       if (!props || typeof props !== "object") return [];
-      if (!Object.prototype.hasOwnProperty.call(props, app.CONTRACT_ATTR_COLUMN)) return [];
-      return [app.CONTRACT_ATTR_COLUMN];
+      const out = [];
+      for (const k of Object.keys(props)) {
+        if (app.isContratoColumnKey(k)) out.push(k);
+      }
+      return out;
     }
 
   app.looksLikeContractValue = function looksLikeContractValue(raw) {
