@@ -25,20 +25,20 @@
   --ig-popup-text: rgba(255,255,255,.94);
   --ig-popup-muted: rgba(255,255,255,.78);
 
-  /* Tokens (tabelas) — claro */
-  --tbl-surface: rgba(255, 255, 255, .86);
-  --tbl-border: rgba(15, 23, 42, .12);
-  --tbl-divider: rgba(15, 23, 42, .10);
-  --tbl-head-bg: rgba(248, 250, 252, .98);
-  --tbl-head-hover-bg: rgba(226, 232, 240, .92);
-  --tbl-head-text: rgba(15, 23, 42, .86);
-  --tbl-cell-text: rgba(15, 23, 42, .86);
-  --tbl-row-odd: rgba(255, 255, 255, .62);
-  --tbl-row-even: rgba(241, 245, 249, .70);
-  --tbl-hover: rgba(13, 148, 136, .10);
-  --tbl-selected-bg: rgba(45, 212, 191, .18);
+  /* Tokens (tabelas) — claro (alto contraste no fundo branco) */
+  --tbl-surface: rgba(255, 255, 255, .96);
+  --tbl-border: rgba(15, 23, 42, .14);
+  --tbl-divider: rgba(15, 23, 42, .12);
+  --tbl-head-bg: rgba(241, 245, 249, .98);
+  --tbl-head-hover-bg: rgba(226, 232, 240, .95);
+  --tbl-head-text: #0f172a;
+  --tbl-cell-text: #1e293b;
+  --tbl-row-odd: rgba(255, 255, 255, .92);
+  --tbl-row-even: rgba(248, 250, 252, .98);
+  --tbl-hover: rgba(13, 148, 136, .12);
+  --tbl-selected-bg: rgba(45, 212, 191, .20);
   --tbl-selected-outline: rgba(13, 148, 136, .55);
-  --tbl-selected-accent: rgba(13, 148, 136, .85);
+  --tbl-selected-accent: rgba(15, 118, 110, .95);
   --tbl-selected-glow: 0 0 0 3px rgba(13, 148, 136, .16);
 
   /* Fundo do painel (tabela) — claro */
@@ -3523,6 +3523,15 @@ body:not(.theme-night) .panel-body--muted{
   box-shadow: var(--ring);
   border-color: rgba(45, 212, 191, .55);
 }
+/* Modo claro: texto escuro no campo de busca da tabela */
+body:not(.theme-night) .table-tools input[type="search"]{
+  background: rgba(255, 255, 255, .96);
+  border-color: rgba(15, 23, 42, .16);
+  color: #0f172a;
+}
+body:not(.theme-night) .table-tools input[type="search"]::placeholder{
+  color: rgba(15, 23, 42, .45);
+}
 
 /* Tabelas de atributos — preenchidas e padronizadas */
 table{ border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.5px; }
@@ -3574,6 +3583,30 @@ table{ border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.
   letter-spacing: .02em;
   user-select:none;
   white-space: nowrap;
+}
+.attributes-table td{
+  color: var(--tbl-cell-text);
+  font-weight: 600;
+}
+/* Modo branco: força contraste alto (evita texto claro herdado) */
+body:not(.theme-night) .attributes-table th,
+body:not(.theme-night) .attributes-table td,
+body:not(.theme-night) .attributes-table .col-header-name,
+body:not(.theme-night) .attributes-table thead input.col-filter{
+  color: var(--tbl-cell-text);
+}
+body:not(.theme-night) .attributes-table th{
+  color: var(--tbl-head-text);
+}
+body:not(.theme-night) .attributes-table .col-header-name{
+  color: var(--tbl-head-text);
+  opacity: 1;
+}
+body:not(.theme-night) .attributes-table thead input.col-filter::placeholder{
+  color: rgba(15, 23, 42, .42);
+}
+body:not(.theme-night) .attributes-table tbody tr.selected-row td{
+  color: var(--tbl-head-text);
 }
 
 .attributes-table thead th.col-header-cell{
@@ -4151,23 +4184,23 @@ body.theme-satellite .map-basemap-option:has(.map-basemap-option__input:checked)
   color: #93c5fd;
 }
 body.theme-satellite:not(.theme-night) .attributes-table th{
-  background: linear-gradient(180deg, rgba(30, 41, 59, .96), rgba(15, 23, 42, .92));
-  color: rgba(241, 245, 249, .95);
-  border-color: rgba(148, 163, 184, .26);
+  background: var(--tbl-head-bg);
+  color: var(--tbl-head-text);
+  border-color: var(--tbl-divider);
 }
 body.theme-satellite:not(.theme-night) .attributes-table td{
-  border-color: rgba(148, 163, 184, .18);
-  color: rgba(241, 245, 249, .92);
+  border-color: var(--tbl-divider);
+  color: var(--tbl-cell-text);
 }
 body.theme-satellite:not(.theme-night) .attributes-table tbody tr:nth-child(even){
-  background-color: rgba(30, 41, 59, .24);
+  background-color: var(--tbl-row-even);
 }
 body.theme-satellite:not(.theme-night) .attributes-table tbody tr:hover{
-  background-color: rgba(15, 118, 110, .18);
+  background-color: var(--tbl-hover);
 }
 body.theme-satellite:not(.theme-night) .attributes-table tbody tr.selected-row{
-  background-color: rgba(15, 118, 110, .26);
-  outline: 1px solid rgba(45, 212, 191, .55);
+  background-color: var(--tbl-selected-bg);
+  outline: 1px solid var(--tbl-selected-outline);
 }
 
 /* Satélite (claro) — cabeçalho da tabela coerente com o mapa */
