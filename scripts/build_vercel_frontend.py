@@ -57,8 +57,11 @@ def _rmtree(path: Path) -> None:
 
 def main() -> None:
     _rmtree(OUT)
-    OUT.mkdir(parents=True)
-    shutil.copytree(STATIC_SRC, OUT / "static")
+    OUT.mkdir(parents=True, exist_ok=True)
+    static_dst = OUT / "static"
+    if static_dst.exists():
+        _rmtree(static_dst)
+    shutil.copytree(STATIC_SRC, static_dst)
     if CFG.is_file():
         shutil.copy2(CFG, OUT / "vercel.json")
 
