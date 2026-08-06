@@ -1,0 +1,40 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/layers",
+      "destination": "https://webgis-infrageo-ba0u.onrender.com/layers"
+    },
+    {
+      "source": "/layers/:path*",
+      "destination": "https://webgis-infrageo-ba0u.onrender.com/layers/:path*"
+    },
+    {
+      "source": "/data",
+      "destination": "https://webgis-infrageo-ba0u.onrender.com/data"
+    },
+    {
+      "source": "/data-files/:path*",
+      "destination": "https://webgis-infrageo-ba0u.onrender.com/data-files/:path*"
+    },
+    {
+      "source": "/export/:path*",
+      "destination": "https://webgis-infrageo-ba0u.onrender.com/export/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://webgis-infrageo-ba0u.onrender.com/health"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    }
+  ]
+}

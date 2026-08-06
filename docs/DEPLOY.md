@@ -28,8 +28,9 @@ Os shapefiles em `assets/` entram na imagem Docker (~100 MB).
 6. Aguarde o build Docker (pode levar vários minutos na 1ª vez: GDAL + pip + assets).
 7. Quando o status ficar **Live**, abra a URL pública (ex.: `https://webgis-infrageo.onrender.com`).
 8. Valide:
-   - `https://SEU-SERVICO.onrender.com/` — mapa
-   - `https://SEU-SERVICO.onrender.com/health` — deve retornar `"status":"ok"` e `"assets_exists":true`
+   - `https://SEU-SERVICO.onrender.com/health` — `"status":"ok"`, `"api_only":true`
+   - `https://SEU-SERVICO.onrender.com/` — JSON da API (não o mapa)
+   - Mapa: https://infrageo-webgis.vercel.app
 
 ### Limitações do Free
 
@@ -103,7 +104,29 @@ gunicorn -c gunicorn.conf.py app:app
 
 ---
 
-## 4) Checklist go-live
+## 4) Frontend no Vercel + API no Render
+
+Em produção o Render roda **só a API** (`INFRAGEO_API_ONLY=1`): `/` devolve JSON e não serve o mapa.
+A UI fica no Vercel; o `vercel.json` faz proxy de `/layers`, `/data`, etc. para o Render.
+
+1. Build estático:
+   ```bash
+   python scripts/build_vercel_frontend.py
+   ```
+2. Deploy:
+   ```bash
+   cd vercel-public
+   npx vercel deploy --prod
+   ```
+3. URL de produção: https://infrageo-webgis.vercel.app  
+4. O `vercel.json` faz proxy de `/layers`, `/data`, `/export` e `/health` para `https://webgis-infrageo-ba0u.onrender.com`.  
+   Se o Render estiver dormindo ou em 502, o mapa abre no Vercel mas as camadas falham até a API voltar.
+
+Configuração versionada em `vercel-frontend/vercel.json` (copiada no build).
+
+---
+
+## 5) Checklist go-live
 
 - [ ] `assets/` com os `.shp/.dbf/.shx/.prj` necessários
 - [ ] `/health` → `status: ok` e `assets_exists: true`

@@ -19,6 +19,13 @@ services:
     envVars:
       - key: INFRAGEO_ENV
         value: production
+      # UI no Vercel; este serviço só expõe a API GIS
+      - key: INFRAGEO_API_ONLY
+        value: "1"
+      - key: INFRAGEO_FRONTEND_URL
+        value: https://infrageo-webgis.vercel.app
+      - key: CORS_ORIGINS
+        value: https://infrageo-webgis.vercel.app
       - key: WEB_CONCURRENCY
         value: "1"
       - key: GUNICORN_TIMEOUT

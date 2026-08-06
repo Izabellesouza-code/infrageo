@@ -63,9 +63,6 @@ from shapely.geometry import LineString, MultiLineString, Polygon, MultiPolygon
 from shapely.ops import polygonize, unary_union
 
 
-app = Flask(__name__, template_folder="templates", static_folder="static")
-
-
 def _runtime_env() -> str:
     return os.environ.get("INFRAGEO_ENV", os.environ.get("FLASK_ENV", "development")).strip().lower()
 
@@ -74,7 +71,53 @@ def _is_production() -> bool:
     return _runtime_env() in ("production", "prod")
 
 
+def _api_only_mode() -> bool:
+    """Render/produção: só API. Local: UI Flask, a menos que INFRAGEO_API_ONLY=1."""
+    raw = os.environ.get("INFRAGEO_API_ONLY")
+    if raw is not None and raw.strip() != "":
+        return raw.strip().lower() in ("1", "true", "yes", "on")
+    return _is_production()
+
+
+def _frontend_url() -> str:
+    return (
+        os.environ.get("INFRAGEO_FRONTEND_URL", "https://infrageo-webgis.vercel.app")
+        .strip()
+        .rstrip("/")
+    )
+
+
 IS_PRODUCTION = _is_production()
+API_ONLY = _api_only_mode()
+
+app = Flask(
+    __name__,
+    template_folder="templates",
+    # Em API-only não serve /static (UI fica no Vercel)
+    static_folder=None if API_ONLY else "static",
+)
+
+
+@app.before_request
+def _cors_preflight():
+    if request.method == "OPTIONS":
+        return ("", 204)
+    return None
+
+
+@app.after_request
+def _add_cors_headers(resp):
+    """Permite frontend estático (ex.: Vercel) chamar a API no Render."""
+    origin = request.headers.get("Origin") or ""
+    allowed = os.environ.get("CORS_ORIGINS", "*").strip()
+    if allowed == "*":
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+    elif origin and origin in {o.strip() for o in allowed.split(",") if o.strip()}:
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Vary"] = "Origin"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Accept"
+    return resp
 
 
 def _low_memory_mode() -> bool:
@@ -1634,6 +1677,17 @@ def _load_geodataframe() -> gpd.GeoDataFrame:
 
 @app.route("/")
 def index():
+    if API_ONLY:
+        return jsonify(
+            {
+                "service": "InfraGeo AM API",
+                "status": "ok",
+                "api_only": True,
+                "frontend": _frontend_url(),
+                "health": "/health",
+                "layers": "/layers",
+            }
+        )
     return render_template("index.html")
 
 
@@ -2967,6 +3021,8 @@ def health():
             "status": "ok",
             "env": _runtime_env(),
             "production": IS_PRODUCTION,
+            "api_only": API_ONLY,
+            "frontend": _frontend_url() if API_ONLY else None,
             "low_memory": _low_memory_mode(),
             "assets_dir": str(ASSETS_DIR),
             "assets_exists": ASSETS_DIR.is_dir(),

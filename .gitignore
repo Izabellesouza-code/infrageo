@@ -51,6 +51,8 @@ storage/exports/*
 dist/
 build/
 node_modules/
+vercel-public/
+.vercel/
 
 # Zip redundante da pasta assets/ (os shapefiles já estão em assets/)
 assets.zip
