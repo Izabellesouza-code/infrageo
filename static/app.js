@@ -226,7 +226,7 @@
     coordsControl: null,
     // Inicia no Carto Positron (padrão InfraGeo)
     currentBasemapId: "carto-positron",
-    theme: "light", // "light" | "night"
+    theme: "night", // UI fixa no tema dark
     geojsonLayer: null,
     boundaryLayer: null,
     // Se o usuário desligar o limite explicitamente, não reativar automaticamente (fallback/menu).
@@ -8918,41 +8918,32 @@
 
   /** Ajusta o tema da interface para combinar com o mapa base atual. */
   function applyUiThemeForBasemap(id) {
-    // Mantém o layout padrão claro para todos os mapas base, incluindo satélite.
+    // UI permanece sempre dark; só remove classe auxiliar de satélite.
     if (id) document.body.classList.remove("theme-satellite");
+    document.body.classList.add("theme-night");
   }
 
-  function applyThemeClass(theme) {
-    const night = theme === "night";
-    document.body.classList.toggle("theme-night", night);
+  function applyThemeClass(_theme) {
+    // Somente dark.
+    document.body.classList.add("theme-night");
+    document.body.classList.remove("theme-satellite");
     if (themeToggleBtn) {
-      themeToggleBtn.setAttribute("aria-pressed", night ? "true" : "false");
-      // Ícone: lua = ativar noturno, sol = voltar ao claro
-      themeToggleBtn.textContent = night ? "☀" : "☾";
-      themeToggleBtn.title = night ? "Mudar para tema claro" : "Mudar para tema noturno";
+      themeToggleBtn.hidden = true;
+      themeToggleBtn.setAttribute("aria-hidden", "true");
+      themeToggleBtn.setAttribute("aria-pressed", "true");
+      themeToggleBtn.title = "Tema escuro";
     }
   }
 
   function loadThemePreference() {
-    try {
-      const stored = localStorage.getItem("infrageo.theme");
-      if (stored === "night" || stored === "light") return stored;
-    } catch {
-      // ignore
-    }
-    // Fallback: respeita preferência do sistema quando possível.
-    try {
-      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "light";
-    } catch {
-      return "light";
-    }
+    return "night";
   }
 
-  function setThemePreference(nextTheme) {
-    state.theme = nextTheme === "night" ? "night" : "light";
-    applyThemeClass(state.theme);
+  function setThemePreference(_nextTheme) {
+    state.theme = "night";
+    applyThemeClass("night");
     try {
-      localStorage.setItem("infrageo.theme", state.theme);
+      localStorage.setItem("infrageo.theme", "night");
     } catch {
       // ignore
     }
@@ -13162,11 +13153,9 @@
       closeMobileSidebarIfNeeded();
     });
 
-    themeToggleBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setThemePreference(state.theme === "night" ? "light" : "night");
-    });
+    // Tema fixo dark — sem alternância claro/escuro.
+    themeToggleBtn?.setAttribute("hidden", "");
+    themeToggleBtn?.setAttribute("aria-hidden", "true");
     // Botão de zoom removido (tabelas nunca dão zoom).
 
     // Filtro removido do painel inferior.

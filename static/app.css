@@ -370,13 +370,14 @@ button, input, select, textarea{
   color: inherit;
 }
 
-/* Botão de tema (ícone) */
+/* Botão de tema (ícone) — oculto: UI só dark */
 .theme-toggle{
   width: 40px;
   height: 40px;
   padding: 0;
   border-radius: 999px;
-  display: inline-flex;
+  display: none !important;
+}
   align-items: center;
   justify-content: center;
   font-weight: 900;
