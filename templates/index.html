@@ -42,7 +42,7 @@
       crossorigin=""
     />
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v=8" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v=11" />
     <link
       rel="preload"
       as="image"
@@ -521,6 +521,51 @@
                         </label>
                       </div>
                     </div>
+                    <div id="layer-row-balsa-igapo-acu" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--oac" aria-hidden="true" title="OAC — Balsa">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="2" y="2" width="60" height="60" rx="14" fill="#1d4ed8"/>
+                            <path d="M12 40h40" stroke="#93c5fd" stroke-width="3" stroke-linecap="round"/>
+                            <path d="M16 40c2-10 8-16 16-16s14 6 16 16" stroke="#e0f2fe" stroke-width="3" fill="none" stroke-linecap="round"/>
+                            <path d="M20 40v8M32 40v10M44 40v8" stroke="#bfdbfe" stroke-width="2.6" stroke-linecap="round"/>
+                            <circle cx="32" cy="28" r="3.2" fill="#f8fafc"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Balsa Igapó-Açu</div>
+                          <div class="layer-desc" id="layer-balsa-igapo-acu-hint">BR-319 · OAC</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="balsa-igapo-acu"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Balsa Igapó-Açu"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="balsa-igapo-acu" role="menu" hidden>
+                          <button
+                            type="button"
+                            class="layer-kebab-item"
+                            role="menuitem"
+                            data-layer-action="table"
+                            data-layer="balsa-igapo-acu"
+                          >
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar Balsa Igapó-Açu">
+                          <input id="layer-balsa-igapo-acu" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
                     <div id="layer-row-pontes-br319" class="layer-row layer-row--nested">
                       <div class="layer-left">
                         <span class="layer-icon layer-icon--svg layer-icon--oae" aria-hidden="true" title="OAE — Obra de Arte Especial">
@@ -562,6 +607,49 @@
                         </div>
                         <label class="switch" title="Mostrar/ocultar pontes BR-319">
                           <input id="layer-pontes-br319" type="checkbox" />
+                          <span class="switch-ui"></span>
+                        </label>
+                      </div>
+                    </div>
+                    <div id="layer-row-hidrovias-br319" class="layer-row layer-row--nested">
+                      <div class="layer-left">
+                        <span class="layer-icon layer-icon--svg layer-icon--hidrovias" aria-hidden="true" title="Hidrovias SNV — BR-319">
+                          <svg class="layer-icon-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                            <rect x="2" y="2" width="60" height="60" rx="14" fill="#0369a1"/>
+                            <path d="M10 28c6 8 12 8 18 0s12-8 18 0 12 8 18 0" stroke="#e0f2fe" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+                            <path d="M10 40c6 8 12 8 18 0s12-8 18 0 12 8 18 0" stroke="#7dd3fc" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".9"/>
+                          </svg>
+                        </span>
+                        <div class="layer-meta">
+                          <div class="layer-name">Hidrovias</div>
+                          <div class="layer-desc" id="layer-hidrovias-br319-hint">BR-319 · SNV</div>
+                        </div>
+                      </div>
+                      <div class="layer-right">
+                        <button
+                          type="button"
+                          class="layer-kebab"
+                          data-layer-menu="hidrovias-br319"
+                          aria-haspopup="menu"
+                          aria-expanded="false"
+                          aria-label="Opções da subcamada Hidrovias BR-319"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        <div class="layer-kebab-menu" data-layer-menu-popover="hidrovias-br319" role="menu" hidden>
+                          <button
+                            type="button"
+                            class="layer-kebab-item"
+                            role="menuitem"
+                            data-layer-action="table"
+                            data-layer="hidrovias-br319"
+                          >
+                            Tabela de atributos
+                          </button>
+                        </div>
+                        <label class="switch" title="Mostrar/ocultar Hidrovias BR-319">
+                          <input id="layer-hidrovias-br319" type="checkbox" />
                           <span class="switch-ui"></span>
                         </label>
                       </div>
@@ -1511,7 +1599,7 @@
 
     <!-- Esri Leaflet (para mapas base Esri) -->
     <script src="https://unpkg.com/esri-leaflet@3/dist/esri-leaflet.js"></script>
-    <script src="{{ url_for('static', filename='app.js') }}?v=6"></script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=10"></script>
   </body>
 </html>
 

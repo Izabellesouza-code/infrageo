@@ -141,6 +141,12 @@
   const layerBueirosBr319Toggle = $("layer-bueiros-br319");
   const layerBueirosBr319Row = $("layer-row-bueiros-br319");
   const layerBueirosBr319Hint = $("layer-bueiros-br319-hint");
+  const layerBalsaIgapoAcuToggle = $("layer-balsa-igapo-acu");
+  const layerBalsaIgapoAcuRow = $("layer-row-balsa-igapo-acu");
+  const layerBalsaIgapoAcuHint = $("layer-balsa-igapo-acu-hint");
+  const layerHidroviasBr319Toggle = $("layer-hidrovias-br319");
+  const layerHidroviasBr319Row = $("layer-row-hidrovias-br319");
+  const layerHidroviasBr319Hint = $("layer-hidrovias-br319-hint");
   const branchBr174 = $("layer-branch-br174");
   const branchHeadBr174 = $("layer-branch-br174-head");
   const layerBueirosBr174Toggle = $("layer-bueiros-br174");
@@ -246,6 +252,10 @@
     pontesBr307Loading: false,
     pontesBr319Layer: null,
     pontesBr319Loading: false,
+    balsaIgapoAcuLayer: null,
+    balsaIgapoAcuLoading: false,
+    hidroviasBr319Layer: null,
+    hidroviasBr319Loading: false,
     pontesBr230Layer: null,
     pontesBr230Loading: false,
     bueirosBr319Layer: null,
@@ -350,6 +360,16 @@
     pontesBr319LayersByIndex: {},
     pontesBr319SelectedIndex: null,
     pontesBr319ColumnKeys: [],
+    balsaIgapoAcuFeatures: [],
+    balsaIgapoAcuLayersByIndex: {},
+    balsaIgapoAcuSelectedIndex: null,
+    balsaIgapoAcuColumnKeys: [],
+    balsaIgapoAcuTable: { sortKey: null, sortDir: "asc", filterText: "" },
+    hidroviasBr319Features: [],
+    hidroviasBr319LayersByIndex: {},
+    hidroviasBr319SelectedIndex: null,
+    hidroviasBr319ColumnKeys: [],
+    hidroviasBr319Table: { sortKey: null, sortDir: "asc", filterText: "" },
     pontesBr319Table: {
       sortKey: null,
       sortDir: "asc",
@@ -1414,6 +1434,15 @@
       if (code) return `Ponte ${String(code).trim()}`;
       return "Ponte";
     }
+    if (kind === "balsa-igapo-acu") {
+      return firstPropValueByKeyHints(p, ["NOME", "Nome", "nome"]) || "Balsa Igapó-Açu";
+    }
+    if (kind === "hidrovias-br319") {
+      return (
+        firstPropValueByKeyHints(p, ["Nome", "NOME", "Trecho", "Codigo", "codigo"]) ||
+        "Hidrovia BR-319"
+      );
+    }
     if (kind === "jazidas") {
       const code = firstPropValueByKeyHints(p, ["vl_codigo", "codigo", "CODIGO", "id", "ID"]);
       if (code) return `Jazida ${String(code).trim()}`;
@@ -1485,6 +1514,8 @@
       jazidas: layerJazidasToggle,
       "hidrovias-am": layerHidroviasAmToggle,
       "pontes-br319": layerPontesBr319Toggle,
+      "balsa-igapo-acu": layerBalsaIgapoAcuToggle,
+      "hidrovias-br319": layerHidroviasBr319Toggle,
       "pontes-br230": layerPontesBr230Toggle,
       "bueiros-br319": layerBueirosBr319Toggle,
       "bueiros-br174": layerBueirosBr174Toggle,
@@ -1562,6 +1593,8 @@
       if (kind === "jazidas") return ensureJazidasBr307OnMap();
       if (kind === "hidrovias-am") return ensureHidroviasAmOnMap();
       if (kind === "pontes-br319") return ensurePontesBr319OnMap();
+      if (kind === "balsa-igapo-acu") return ensureBalsaIgapoAcuOnMap();
+      if (kind === "hidrovias-br319") return ensureHidroviasBr319OnMap();
       if (kind === "pontes-br230") return ensurePontesBr230OnMap();
       if (kind === "bueiros-br319") return ensureBueirosBr319OnMap();
       if (kind === "bueiros-br174") return ensureBueirosBr174OnMap();
@@ -1978,7 +2011,9 @@
         ]),
         legendBranch("br-319", "BR-319", [
           legendLeaf(layerBueirosBr319Toggle, "Bueiros", "br-319"),
+          legendLeaf(layerBalsaIgapoAcuToggle, "Balsa Igapó-Açu", "br-319"),
           legendLeaf(layerPontesBr319Toggle, "Pontes", "br-319"),
+          legendLeaf(layerHidroviasBr319Toggle, "Hidrovias", "br-319", "line"),
           legendLeaf(layerPcaPradsBr319Toggle, "PCA - PRADS", "br-319", "poly"),
           legendLeaf(layerPradsBr319Toggle, "PRADS", "br-319", "poly"),
           legendLeaf(layerPcaPradsCmmBr319Toggle, "PCA - PRADS CMM", "br-319", "poly"),
@@ -2122,6 +2157,8 @@
     if (kind === "jazidas") return state.jazidasBr307Layer;
     if (kind === "hidrovias-am") return state.hidroviasAmLayer;
     if (kind === "pontes-br319") return state.pontesBr319Layer;
+    if (kind === "balsa-igapo-acu") return state.balsaIgapoAcuLayer;
+    if (kind === "hidrovias-br319") return state.hidroviasBr319Layer;
     if (kind === "pontes-br230") return state.pontesBr230Layer;
     if (kind === "bueiros-br319") return state.bueirosBr319Layer;
     if (kind === "bueiros-br174") return state.bueirosBr174Layer;
@@ -2161,6 +2198,8 @@
       pontes: [state.pontesFeatures, state.pontesLayersByIndex],
       jazidas: [state.jazidasFeatures, state.jazidasLayersByIndex],
       "pontes-br319": [state.pontesBr319Features, state.pontesBr319LayersByIndex],
+      "balsa-igapo-acu": [state.balsaIgapoAcuFeatures, state.balsaIgapoAcuLayersByIndex],
+      "hidrovias-br319": [state.hidroviasBr319Features, state.hidroviasBr319LayersByIndex],
       "pontes-br230": [state.pontesBr230Features, state.pontesBr230LayersByIndex],
       "bueiros-br319": [state.bueirosBr319Features, state.bueirosBr319LayersByIndex],
       "bueiros-br174": [state.bueirosBr174Features, state.bueirosBr174LayersByIndex],
@@ -2247,6 +2286,8 @@
       if (kind === "pontes" && state.pontesFeatures?.length) return state.pontesFeatures;
       if (kind === "jazidas" && state.jazidasFeatures?.length) return state.jazidasFeatures;
       if (kind === "pontes-br319" && state.pontesBr319Features?.length) return state.pontesBr319Features;
+      if (kind === "balsa-igapo-acu" && state.balsaIgapoAcuFeatures?.length) return state.balsaIgapoAcuFeatures;
+      if (kind === "hidrovias-br319" && state.hidroviasBr319Features?.length) return state.hidroviasBr319Features;
       if (kind === "pontes-br230" && state.pontesBr230Features?.length) return state.pontesBr230Features;
       if (kind === "bueiros-br319" && state.bueirosBr319Features?.length) return state.bueirosBr319Features;
       if (kind === "bueiros-br174" && state.bueirosBr174Features?.length) return state.bueirosBr174Features;
@@ -3562,6 +3603,42 @@
     });
   }
 
+  function clearMapFocusOutline(e) {
+    try {
+      const oe = e?.originalEvent || e;
+      const t = oe?.target;
+      if (t && typeof t.blur === "function" && (t.tagName === "path" || t.tagName === "svg" || t.classList?.contains?.("leaflet-interactive"))) {
+        t.blur();
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      const ae = document.activeElement;
+      if (
+        ae &&
+        typeof ae.blur === "function" &&
+        (ae.id === "map" ||
+          ae.classList?.contains?.("leaflet-container") ||
+          ae.classList?.contains?.("leaflet-interactive") ||
+          ae.tagName === "path" ||
+          ae.tagName === "svg" ||
+          ae.closest?.("#map"))
+      ) {
+        ae.blur();
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      if (typeof L?.DomUtil?.preventOutline === "function" && state.map?.getContainer()) {
+        L.DomUtil.preventOutline(state.map.getContainer());
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   function handleMapFeatureClick(e, feature, layer, selectionKind, options = {}) {
     const { zoomTo = true, identifyResults = null, activeIndex = 0 } = options;
     if (!state.map || !feature) return;
@@ -3583,6 +3660,9 @@
       selectionKind: active.selectionKind || selectionKind,
       showQuickMenu: false,
     });
+
+    // Remove o “quadro” de foco do navegador no bbox SVG após o clique.
+    clearMapFocusOutline(e);
 
     try {
       state.map.closePopup?.();
@@ -5379,6 +5459,8 @@
     if (layer === state.bueirosLayer) return layerBueirosToggle;
     if (layer === state.pontesBr307Layer) return layerPontesToggle;
     if (layer === state.pontesBr319Layer) return layerPontesBr319Toggle;
+    if (layer === state.balsaIgapoAcuLayer) return layerBalsaIgapoAcuToggle;
+    if (layer === state.hidroviasBr319Layer) return layerHidroviasBr319Toggle;
     if (layer === state.pontesBr230Layer) return layerPontesBr230Toggle;
     if (layer === state.bueirosBr319Layer) return layerBueirosBr319Toggle;
     if (layer === state.jazidasBr307Layer) return layerJazidasToggle;
@@ -5637,6 +5719,8 @@
       need("Jazidas BR-307", state.jazidasFeatures, layerJazidasToggle, ensureJazidasBr307OnMap, () => state.jazidasBr307Layer),
       need("IP4", state.ip4Features, layerIp4Toggle, ensureIp4OnMap, () => state.ip4Layer),
       need("Pontes BR-319", state.pontesBr319Features, layerPontesBr319Toggle, ensurePontesBr319OnMap, () => state.pontesBr319Layer),
+      need("Balsa Igapó-Açu", state.balsaIgapoAcuFeatures, layerBalsaIgapoAcuToggle, ensureBalsaIgapoAcuOnMap, () => state.balsaIgapoAcuLayer),
+      need("Hidrovias BR-319", state.hidroviasBr319Features, layerHidroviasBr319Toggle, ensureHidroviasBr319OnMap, () => state.hidroviasBr319Layer),
       need("Pontes BR-230", state.pontesBr230Features, layerPontesBr230Toggle, ensurePontesBr230OnMap, () => state.pontesBr230Layer),
       need("Bueiros BR-319", state.bueirosBr319Features, layerBueirosBr319Toggle, ensureBueirosBr319OnMap, () => state.bueirosBr319Layer),
       need("UC Estadual", state.ucEstadualFeatures, layerUcEstadualToggle, ensureUcEstadualOnMap, () => state.ucEstadualLayer),
@@ -7157,6 +7241,8 @@
       [layerTiAmToggle, { ensure: ensureTiAmOnMap, getLayer: () => state.tiAmLayer }],
       [layerHidroviasAmToggle, { ensure: ensureHidroviasAmOnMap, getLayer: () => state.hidroviasAmLayer }],
       [layerPontesBr319Toggle, { ensure: ensurePontesBr319OnMap, getLayer: () => state.pontesBr319Layer }],
+      [layerBalsaIgapoAcuToggle, { ensure: ensureBalsaIgapoAcuOnMap, getLayer: () => state.balsaIgapoAcuLayer }],
+      [layerHidroviasBr319Toggle, { ensure: ensureHidroviasBr319OnMap, getLayer: () => state.hidroviasBr319Layer }],
       [layerPontesBr230Toggle, { ensure: ensurePontesBr230OnMap, getLayer: () => state.pontesBr230Layer }],
       [layerBueirosBr319Toggle, { ensure: ensureBueirosBr319OnMap, getLayer: () => state.bueirosBr319Layer }],
       [layerBueirosBr174Toggle, { ensure: ensureBueirosBr174OnMap, getLayer: () => state.bueirosBr174Layer }],
@@ -7735,6 +7821,169 @@
     }
   }
 
+
+
+  function fetchBalsaIgapoAcuInfo() {
+    return fetch("/layers/balsa-igapo-acu/info")
+      .then(async (r) => {
+        if (r.ok) return r.json();
+        // Fallback: se /info falhar, tenta o GeoJSON (evita “Indisponível” falso).
+        try {
+          const g = await fetch("/layers/balsa-igapo-acu", { method: "GET" });
+          if (g.ok) return { available: true };
+        } catch {
+          // ignore
+        }
+        return { available: false };
+      })
+      .catch(() => ({ available: false }));
+  }
+
+  function fetchHidroviasBr319Info() {
+    return fetch("/layers/hidrovias-br319/info")
+      .then(async (r) => {
+        if (r.ok) return r.json();
+        try {
+          const g = await fetch("/layers/hidrovias-br319", { method: "GET" });
+          if (g.ok) return { available: true };
+        } catch {
+          // ignore
+        }
+        return { available: false };
+      })
+      .catch(() => ({ available: false }));
+  }
+
+  function applyBalsaIgapoAcuAvailability(info) {
+    if (!layerBalsaIgapoAcuToggle) return;
+    if (!info?.available) {
+      if (layerBalsaIgapoAcuHint) layerBalsaIgapoAcuHint.textContent = "Indisponível (assets/BR-319/BALSA_IGAPO_ACU)";
+      layerBalsaIgapoAcuToggle.disabled = true;
+      layerBalsaIgapoAcuToggle.checked = false;
+      layerBalsaIgapoAcuRow?.classList.add("layer-row--disabled");
+      if (state.balsaIgapoAcuLayer && state.map) state.map.removeLayer(state.balsaIgapoAcuLayer);
+      state.balsaIgapoAcuLayer = null;
+      state.balsaIgapoAcuFeatures = [];
+      state.balsaIgapoAcuLayersByIndex = {};
+      return;
+    }
+    layerBalsaIgapoAcuToggle.disabled = false;
+    layerBalsaIgapoAcuRow?.classList.remove("layer-row--disabled");
+    if (layerBalsaIgapoAcuHint) layerBalsaIgapoAcuHint.textContent = "BR-319 · OAC";
+  }
+
+  function applyHidroviasBr319Availability(info) {
+    if (!layerHidroviasBr319Toggle) return;
+    if (!info?.available) {
+      if (layerHidroviasBr319Hint) layerHidroviasBr319Hint.textContent = "Indisponível (assets/BR-319/SNV_HIDROVIAS)";
+      layerHidroviasBr319Toggle.disabled = true;
+      layerHidroviasBr319Toggle.checked = false;
+      layerHidroviasBr319Row?.classList.add("layer-row--disabled");
+      if (state.hidroviasBr319Layer && state.map) state.map.removeLayer(state.hidroviasBr319Layer);
+      state.hidroviasBr319Layer = null;
+      state.hidroviasBr319Features = [];
+      state.hidroviasBr319LayersByIndex = {};
+      return;
+    }
+    layerHidroviasBr319Toggle.disabled = false;
+    layerHidroviasBr319Row?.classList.remove("layer-row--disabled");
+    if (layerHidroviasBr319Hint) layerHidroviasBr319Hint.textContent = "BR-319 · SNV";
+  }
+
+  async function ensureBalsaIgapoAcuOnMap() {
+    if (!state.map || !layerBalsaIgapoAcuToggle?.checked) return;
+    if (state.balsaIgapoAcuLayer) {
+      mountDataLayerIfAllowed(state.balsaIgapoAcuLayer, layerBalsaIgapoAcuToggle);
+      if (state.balsaIgapoAcuLayer.bringToFront) state.balsaIgapoAcuLayer.bringToFront();
+      afterRodoviasSublayerVisibilityChange();
+      return;
+    }
+    if (state.balsaIgapoAcuLoading) return;
+    state.balsaIgapoAcuLoading = true;
+    try {
+      const data = await fetchLayerGeoJson("/layers/balsa-igapo-acu");
+      const feats = (data.features || []).map((f, i) => ({ ...f, _balsaIgapoAcuIndex: i }));
+      data.features = feats;
+      state.balsaIgapoAcuFeatures = feats;
+      state.balsaIgapoAcuLayersByIndex = {};
+      state.balsaIgapoAcuLayer = L.geoJSON(data, {
+        pointToLayer(_feature, latlng) {
+          return L.marker(latlng, {
+            icon: createPontesPointIcon("balsa-igapo-acu"),
+            interactive: true,
+            riseOnHover: true,
+          });
+        },
+        onEachFeature(feature, lyr) {
+          const idx = feature._balsaIgapoAcuIndex;
+          if (typeof idx === "number") state.balsaIgapoAcuLayersByIndex[idx] = lyr;
+          setLayerIdentifyMeta(lyr, feature, "balsa-igapo-acu");
+          attachQuickHover(lyr, feature, "balsa-igapo-acu");
+          bindLayerIdentifyClick(lyr);
+        },
+      });
+      mountDataLayerIfAllowed(state.balsaIgapoAcuLayer, layerBalsaIgapoAcuToggle);
+      if (state.balsaIgapoAcuLayer.bringToFront) state.balsaIgapoAcuLayer.bringToFront();
+      setStatus(`Balsa Igapó-Açu: carregada (${feats.length})`, "ok");
+    } catch (e) {
+      console.warn(e);
+      setStatus("Balsa Igapó-Açu: não carregada", "error");
+      if (layerBalsaIgapoAcuToggle) layerBalsaIgapoAcuToggle.checked = false;
+      state.balsaIgapoAcuLayer = null;
+      state.balsaIgapoAcuFeatures = [];
+      state.balsaIgapoAcuLayersByIndex = {};
+    } finally {
+      state.balsaIgapoAcuLoading = false;
+      afterRodoviasSublayerVisibilityChange();
+    }
+  }
+
+  async function ensureHidroviasBr319OnMap() {
+    if (!state.map || !layerHidroviasBr319Toggle?.checked) return;
+    ensureInfraGeoPanes();
+    if (state.hidroviasBr319Layer) {
+      mountDataLayerIfAllowed(state.hidroviasBr319Layer, layerHidroviasBr319Toggle);
+      if (state.hidroviasBr319Layer.bringToFront) state.hidroviasBr319Layer.bringToFront();
+      afterRodoviasSublayerVisibilityChange();
+      return;
+    }
+    if (state.hidroviasBr319Loading) return;
+    state.hidroviasBr319Loading = true;
+    try {
+      setStatus("Hidrovias BR-319: carregando…", "info");
+      const data = await fetchLayerGeoJson("/layers/hidrovias-br319");
+      const feats = (data.features || []).map((f, i) => ({ ...f, _hidroviasBr319Index: i }));
+      data.features = feats;
+      state.hidroviasBr319Features = feats;
+      state.hidroviasBr319LayersByIndex = {};
+      state.hidroviasBr319Layer = L.geoJSON(data, {
+        pane: state.panes?.lines,
+        style() {
+          return { color: "#0284c7", weight: 3.4, opacity: 0.92 };
+        },
+        onEachFeature(feature, lyr) {
+          const idx = feature._hidroviasBr319Index;
+          if (typeof idx === "number") state.hidroviasBr319LayersByIndex[idx] = lyr;
+          setLayerIdentifyMeta(lyr, feature, "hidrovias-br319");
+          attachQuickHover(lyr, feature, "hidrovias-br319");
+          bindLayerIdentifyClick(lyr);
+        },
+      });
+      mountDataLayerIfAllowed(state.hidroviasBr319Layer, layerHidroviasBr319Toggle);
+      if (state.hidroviasBr319Layer.bringToFront) state.hidroviasBr319Layer.bringToFront();
+      setStatus(`Hidrovias BR-319: carregadas (${feats.length})`, "ok");
+    } catch (e) {
+      console.warn(e);
+      setStatus("Hidrovias BR-319: não carregadas", "error");
+      if (layerHidroviasBr319Toggle) layerHidroviasBr319Toggle.checked = false;
+      state.hidroviasBr319Layer = null;
+      state.hidroviasBr319Features = [];
+      state.hidroviasBr319LayersByIndex = {};
+    } finally {
+      state.hidroviasBr319Loading = false;
+      afterRodoviasSublayerVisibilityChange();
+    }
+  }
 
   async function ensurePontesBr319OnMap() {
     if (!state.map || !layerPontesBr319Toggle?.checked) return;
@@ -11386,6 +11635,8 @@
     if (state.highlightOverlayLayer.bringToFront) state.highlightOverlayLayer.bringToFront();
     if (layer?.bringToFront) layer.bringToFront();
 
+    clearMapFocusOutline();
+
     if (lightHover) {
       // Mantém apenas highlight + estado de seleção (sem custo de tabelas/painéis)
       return;
@@ -13152,6 +13403,7 @@
         syncMobileSidebarDefault();
         invalidateMapSoon();
       }, 180);
+      setTimeout(invalidateMapSoon, 400);
     });
     try {
       if (window.visualViewport) {
@@ -13161,6 +13413,21 @@
     } catch {
       // ignore
     }
+    // Celular/tablet: reenquadra o mapa ao voltar para a aba ou sair do bfcache
+    window.addEventListener("pageshow", () => {
+      syncMobileSidebarDefault();
+      invalidateMapSoon();
+      setTimeout(invalidateMapSoon, 200);
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") invalidateMapSoon();
+    });
+    // Primeiro paint mobile: garante largura total após CSS aplicar
+    requestAnimationFrame(() => {
+      syncMobileSidebarDefault();
+      invalidateMapSoon();
+      requestAnimationFrame(invalidateMapSoon);
+    });
     mobileSidebarToggleBtn?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -14010,6 +14277,8 @@
     fetchBueirosBr317Info().then(applyBueirosAvailability);
     fetchPontesBr307Info().then(applyPontesAvailability);
     fetchPontesBr319Info().then(applyPontesBr319Availability);
+    fetchBalsaIgapoAcuInfo().then(applyBalsaIgapoAcuAvailability);
+    fetchHidroviasBr319Info().then(applyHidroviasBr319Availability);
     fetchPontesBr230Info().then(applyPontesBr230Availability);
     fetchBueirosBr319Info().then(applyBueirosBr319Availability);
     fetchJazidasBr307Info().then(applyJazidasAvailability);
@@ -14045,6 +14314,30 @@
         void ensurePontesBr319OnMap();
       } else if (state.pontesBr319Layer) {
         state.map.removeLayer(state.pontesBr319Layer);
+        afterRodoviasSublayerVisibilityChange();
+      }
+      renderLayerLegend();
+    });
+
+    layerBalsaIgapoAcuToggle?.addEventListener("click", (e) => e.stopPropagation());
+    layerBalsaIgapoAcuToggle?.addEventListener("change", () => {
+      if (!state.map) return;
+      if (layerBalsaIgapoAcuToggle.checked) {
+        void ensureBalsaIgapoAcuOnMap();
+      } else if (state.balsaIgapoAcuLayer) {
+        state.map.removeLayer(state.balsaIgapoAcuLayer);
+        afterRodoviasSublayerVisibilityChange();
+      }
+      renderLayerLegend();
+    });
+
+    layerHidroviasBr319Toggle?.addEventListener("click", (e) => e.stopPropagation());
+    layerHidroviasBr319Toggle?.addEventListener("change", () => {
+      if (!state.map) return;
+      if (layerHidroviasBr319Toggle.checked) {
+        void ensureHidroviasBr319OnMap();
+      } else if (state.hidroviasBr319Layer) {
+        state.map.removeLayer(state.hidroviasBr319Layer);
         afterRodoviasSublayerVisibilityChange();
       }
       renderLayerLegend();
@@ -14467,6 +14760,26 @@
       boxZoom: false,
     }).setView([-4.5, -63], 6);
 
+    // Sempre remove o quadro de foco do navegador após cliques no mapa.
+    state.map.on("mousedown click", (e) => {
+      clearMapFocusOutline(e);
+    });
+    try {
+      state.map.getContainer()?.addEventListener(
+        "mousedown",
+        () => {
+          try {
+            L.DomUtil.preventOutline?.(state.map.getContainer());
+          } catch {
+            // ignore
+          }
+        },
+        true,
+      );
+    } catch {
+      // ignore
+    }
+
     // Coordenadas com precisão: último clique (camadas/feições).
     try {
       // Só exibe quando uma feição/camada for clicada.
@@ -14797,6 +15110,8 @@
         layerPontesToggle && "/layers/pontes-br307",
         layerJazidasToggle && "/layers/jazidas-br307/jazida-pontos",
         layerPontesBr319Toggle && "/layers/pontes-br319",
+        layerBalsaIgapoAcuToggle && "/layers/balsa-igapo-acu",
+        layerHidroviasBr319Toggle && "/layers/hidrovias-br319",
         layerPontesBr230Toggle && "/layers/pontes-br230",
         layerBueirosBr319Toggle && "/layers/bueiros-br319",
         layerBueirosBr174Toggle && "/layers/bueiros-br174",

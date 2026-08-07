@@ -1,0 +1,12 @@
+{
+"type": "FeatureCollection",
+"name": "PONTES-BR 319",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "Id": 0, "NOME": "PONTE DO ATIÍ", "LOCAL": "RIO ATIÍ", "LONG": "061° 10.852' W", "LAT": "04° 33.497' S" }, "geometry": { "type": "Point", "coordinates": [ -61.18086, -4.558281000149701 ] } },
+{ "type": "Feature", "properties": { "Id": 0, "NOME": "PONTE CURUÇÁ", "LOCAL": "RIO CURUÇÁ", "LONG": "059° 51.272' W", "LAT": "03° 16.506' S" }, "geometry": { "type": "Point", "coordinates": [ -59.854541, -3.275101000107782 ] } },
+{ "type": "Feature", "properties": { "Id": 0, "NOME": "PONTE AUTAZ MIRIM", "LOCAL": "RIO AUTAZ MIRIM", "LONG": "059° 51.814' W", "LAT": "03° 17.02' S" }, "geometry": { "type": "Point", "coordinates": [ -59.863565, -3.283660000108078 ] } },
+{ "type": "Feature", "properties": { "Id": 0, "NOME": "PONTE DO IGARAPÉ SANTO ANTÔNIO", "LOCAL": "IGARAPÉ SANTO ANTÔNIO", "LONG": "062° 11.892' W", "LAT": "05° 36.659' S" }, "geometry": { "type": "Point", "coordinates": [ -63.05883226655628, -6.859931344451972 ] } },
+{ "type": "Feature", "properties": { "Id": 0, "NOME": "PONTE DO RIO JORDÃO", "LOCAL": "RIO JORDÃO", "LONG": "061° 15.848' W", "LAT": "04° 39.133' S" }, "geometry": { "type": "Point", "coordinates": [ -61.264133333333341, -4.65221666681943 ] } }
+]
+}

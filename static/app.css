@@ -947,12 +947,43 @@ body.theme-night .global-search-filter__contract-empty{
   white-space: normal;
 }
 
-/* Leaflet dá foco no container após clique (tabindex): remove o "quadro" do navegador */
+/* Leaflet/SVG + UI: remove o “quadro” preto/azul do bbox ao clicar (foco do navegador) */
+.leaflet-container,
 .leaflet-container:focus,
 .leaflet-container:focus-visible,
+.leaflet-container:focus-within,
+#map,
 #map:focus,
-#map:focus-visible{
+#map:focus-visible,
+.leaflet-pane svg,
+.leaflet-pane svg:focus,
+.leaflet-pane svg:focus-visible,
+.leaflet-pane path,
+.leaflet-pane path:focus,
+.leaflet-pane path:focus-visible,
+.leaflet-interactive,
+.leaflet-interactive:focus,
+.leaflet-interactive:focus-visible,
+.selected-feature,
+.selected-feature:focus,
+.selected-feature:focus-visible,
+.layer-group-heading--toggle:focus,
+.layer-branch-head--toggle:focus,
+.sidebar-action-btn:focus,
+.btn:focus,
+button:focus{
   outline: none !important;
+  outline-offset: 0 !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Mantém anel de foco só para navegação por teclado */
+.layer-group-heading--toggle:focus-visible,
+.layer-branch-head--toggle:focus-visible,
+.sidebar-action-btn:focus-visible,
+.btn:focus-visible{
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 body.theme-night .map-coords-control,
@@ -3743,15 +3774,19 @@ body:not(.theme-night) .attributes-table tbody tr.selected-row td{
 .selected-feature{
   /* Não bloquear cliques no polígono original para permitir zoom imediato */
   pointer-events: none;
+  filter: none !important;
+  outline: none !important;
 }
 
 /* Contorno do overlay de highlight acompanha a geometria (sem dash/box) */
+.leaflet-pane path.selected-feature,
 .leaflet-overlay-pane path.selected-feature{
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: none;
   animation: none;
-  filter: none;
+  filter: none !important;
+  outline: none !important;
 }
 
 @keyframes selected-feature-dash{
@@ -4242,12 +4277,19 @@ body.theme-satellite:not(.theme-night){
     --workspace-pad: 8px;
   }
 
+  .app-shell,
   .workspace{
-    grid-template-columns: 1fr;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .workspace{
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     position: relative;
     padding-bottom: calc(var(--workspace-pad) + var(--safe-bottom));
     min-height: 0;
+    min-width: 0;
   }
 
   .brand{ min-width: 0; flex: 1 1 auto; }
@@ -4463,12 +4505,18 @@ body.theme-satellite:not(.theme-night){
   .map-wrap{
     border-radius: 14px;
     min-height: 0;
+    min-width: 0;
     flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
     height: 100%;
   }
   .map-stage{
     grid-column: 1;
     grid-row: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     height: 100%;
     min-height: 0;
     display: flex;
@@ -4480,6 +4528,8 @@ body.theme-satellite:not(.theme-night){
     grid-row: 1;
     justify-self: start;
     align-self: stretch;
+    /* Fora do fluxo visual do grid quando recolhida */
+    width: min(380px, calc(100vw - 24px));
   }
 
   /* Zoom do Leaflet: maior e longe do bottom-sheet */

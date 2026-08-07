@@ -365,6 +365,8 @@ _GEOJSON_CACHE_GLOBALS = (
     "_bueiros_br230_geojson_cache",
     "_pontes_br230_geojson_cache",
     "_pontes_br319_geojson_cache",
+    "_balsa_igapo_acu_geojson_cache",
+    "_hidrovias_br319_geojson_cache",
     "_bueiros_br319_geojson_cache",
     "_pca_prads_br319_geojson_cache",
     "_pca_prads_cmm_br319_geojson_cache",
@@ -512,9 +514,22 @@ BR230_PONTES_DIR = BR230_BASE / "PONTES_BR230"
 _bueiros_br230_geojson_cache: dict | None = None
 _pontes_br230_geojson_cache: dict | None = None
 
-# BR-319 — Pontes (portátil): pasta com shapefile(s) de pontes.
-BR319_PONTES_DIR = SHAPEFILE_DIR / "BR-319" / "BASE DAS PONTES" / "SHP BR 319"
+# BR-319 — Pontes (portátil): pasta principal + pasta nova PONTES-BR 319.
+BR319_PONTES_DIRS = [
+    SHAPEFILE_DIR / "BR-319" / "BASE DAS PONTES" / "SHP BR 319",
+    SHAPEFILE_DIR / "BR-319" / "PONTES-BR 319",
+]
+# Compat: código antigo ainda referencia BR319_PONTES_DIR
+BR319_PONTES_DIR = BR319_PONTES_DIRS[0]
 _pontes_br319_geojson_cache: dict | None = None
+
+# BR-319 — Balsa Igapó-Açu (OAC)
+BR319_BALSA_DIR = SHAPEFILE_DIR / "BR-319" / "BALSA_IGAPO_ACU"
+_balsa_igapo_acu_geojson_cache: dict | None = None
+
+# BR-319 — Hidrovias SNV (trechos associados à BR-319)
+BR319_HIDROVIAS_DIR = SHAPEFILE_DIR / "BR-319" / "SNV_HIDROVIAS"
+_hidrovias_br319_geojson_cache: dict | None = None
 
 # BR-319 — Bueiros (portátil): pasta com shapefile(s) em assets/BR-319/SHP_BUEIRO
 BR319_BUEIROS_DIR = SHAPEFILE_DIR / "BR-319" / "SHP_BUEIRO"
@@ -952,6 +967,48 @@ def _shps_in_dir(base: Path) -> list[Path]:
     return shps
 
 
+def _geojsons_in_dir(base: Path) -> list[Path]:
+    """Lista .geojson/.json na pasta (e subpastas)."""
+    if not base.exists() or not base.is_dir():
+        return []
+    files = [
+        p
+        for p in base.rglob("*")
+        if p.is_file() and p.suffix.lower() in (".geojson", ".json") and p.stat().st_size > 20
+    ]
+    files.sort(key=lambda p: str(p).lower())
+    return files
+
+
+def _vector_sources_in_dir(base: Path) -> list[Path]:
+    """
+    Fontes vetoriais para camadas: prefere .shp; se não houver, usa .geojson/.json.
+    Assim pastas convertidas para GeoJSON continuam “disponíveis” no /info.
+    """
+    shps = _shps_in_dir(base)
+    if shps:
+        return shps
+    return _geojsons_in_dir(base)
+
+
+def _br319_pontes_shapefiles() -> list[Path]:
+    """Une as pastas de pontes BR-319, ignorando cópias '(1)' incompletas."""
+    out: list[Path] = []
+    seen: set[str] = set()
+    for base in BR319_PONTES_DIRS:
+        for p in _vector_sources_in_dir(base):
+            stem = p.stem.lower()
+            if "(1)" in stem or stem.endswith(" (1)"):
+                continue
+            key = str(p.resolve()).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(p)
+    # Se só houver geojson sem shp (ou mistos), já cobertos por _vector_sources_in_dir.
+    return out
+
+
 def _layer_id_for_path(path: Path) -> str:
     rel = str(path.resolve()).lower().encode("utf-8", errors="ignore")
     return hashlib.sha1(rel).hexdigest()[:12]
@@ -1249,6 +1306,13 @@ def _read_and_merge_shapefiles(shps: list[Path]) -> gpd.GeoDataFrame:
                 continue
         return None
 
+    def _read_vector_best_effort(path: Path) -> gpd.GeoDataFrame:
+        """Lê .geojson/.json direto ou .shp (com sidecar GeoJSON preferido)."""
+        suffix = path.suffix.lower()
+        if suffix in (".geojson", ".json"):
+            return gpd.read_file(path)
+        return _read_shp_best_effort(path)
+
     def _bad_decode_score(gdf: gpd.GeoDataFrame) -> int:
         """
         Heurística simples para escolher encoding ao ler DBF:
@@ -1381,8 +1445,11 @@ def _read_and_merge_shapefiles(shps: list[Path]) -> gpd.GeoDataFrame:
     frames: list[gpd.GeoDataFrame] = []
     multi = len(shps) > 1
     for shp in shps:
-        shp_to_read = _ensure_shx_via_local_copy(shp)
-        gdf = _read_shp_best_effort(shp_to_read)
+        if shp.suffix.lower() in (".geojson", ".json"):
+            shp_to_read = shp
+        else:
+            shp_to_read = _ensure_shx_via_local_copy(shp)
+        gdf = _read_vector_best_effort(shp_to_read)
         gdf = _ensure_wgs84(gdf)
         # Só marca origem quando há vários SHPs; com um único arquivo mantém atributos originais.
         if multi:
@@ -2689,11 +2756,12 @@ def pontes_br230_geojson():
 
 @app.route("/layers/pontes-br319/info")
 def pontes_br319_info():
-    shps = _shps_in_dir(BR319_PONTES_DIR)
+    shps = _br319_pontes_shapefiles()
     return jsonify(
         {
             "available": len(shps) > 0,
             "basePath": str(BR319_PONTES_DIR),
+            "basePaths": [str(p) for p in BR319_PONTES_DIRS],
             "shapefiles": [p.name for p in shps],
             "shapefilePaths": [str(p) for p in shps],
             "count": len(shps),
@@ -2707,9 +2775,12 @@ def pontes_br319_geojson():
     if _pontes_br319_geojson_cache is not None:
         return jsonify(_pontes_br319_geojson_cache)
 
-    shps = _shps_in_dir(BR319_PONTES_DIR)
+    shps = _br319_pontes_shapefiles()
     if not shps:
-        abort(404, description="Pontes BR-319: nenhum shapefile encontrado em assets/BR-319/BASE DAS PONTES/SHP BR 319.")
+        abort(
+            404,
+            description="Pontes BR-319: nenhum shapefile encontrado em assets/BR-319/BASE DAS PONTES/SHP BR 319 ou assets/BR-319/PONTES-BR 319.",
+        )
 
     try:
         gdf = _read_and_merge_shapefiles(shps)
@@ -2720,6 +2791,78 @@ def pontes_br319_geojson():
         abort(500, description=f"Falha ao ler shapefile(s) de pontes BR-319: {e}")
 
     _pontes_br319_geojson_cache = geojson
+    return jsonify(geojson)
+
+
+@app.route("/layers/balsa-igapo-acu/info")
+def balsa_igapo_acu_info():
+    shps = _vector_sources_in_dir(BR319_BALSA_DIR)
+    return jsonify(
+        {
+            "available": len(shps) > 0,
+            "basePath": str(BR319_BALSA_DIR),
+            "shapefiles": [p.name for p in shps],
+            "shapefilePaths": [str(p) for p in shps],
+            "count": len(shps),
+        }
+    )
+
+
+@app.route("/layers/balsa-igapo-acu")
+def balsa_igapo_acu_geojson():
+    global _balsa_igapo_acu_geojson_cache
+    if _balsa_igapo_acu_geojson_cache is not None:
+        return jsonify(_balsa_igapo_acu_geojson_cache)
+
+    shps = _vector_sources_in_dir(BR319_BALSA_DIR)
+    if not shps:
+        abort(404, description="Balsa Igapó-Açu: nenhum shapefile/geojson em assets/BR-319/BALSA_IGAPO_ACU.")
+
+    try:
+        gdf = _read_and_merge_shapefiles(shps)
+        gdf = _ensure_wgs84(gdf)
+        gdf = _sanitize_gdf_for_json(gdf)
+        geojson = json.loads(gdf.to_json())
+    except Exception as e:
+        abort(500, description=f"Falha ao ler Balsa Igapó-Açu: {e}")
+
+    _balsa_igapo_acu_geojson_cache = geojson
+    return jsonify(geojson)
+
+
+@app.route("/layers/hidrovias-br319/info")
+def hidrovias_br319_info():
+    shps = _vector_sources_in_dir(BR319_HIDROVIAS_DIR)
+    return jsonify(
+        {
+            "available": len(shps) > 0,
+            "basePath": str(BR319_HIDROVIAS_DIR),
+            "shapefiles": [p.name for p in shps],
+            "shapefilePaths": [str(p) for p in shps],
+            "count": len(shps),
+        }
+    )
+
+
+@app.route("/layers/hidrovias-br319")
+def hidrovias_br319_geojson():
+    global _hidrovias_br319_geojson_cache
+    if _hidrovias_br319_geojson_cache is not None:
+        return jsonify(_hidrovias_br319_geojson_cache)
+
+    shps = _vector_sources_in_dir(BR319_HIDROVIAS_DIR)
+    if not shps:
+        abort(404, description="Hidrovias BR-319: nenhum shapefile/geojson em assets/BR-319/SNV_HIDROVIAS.")
+
+    try:
+        gdf = _read_and_merge_shapefiles(shps)
+        gdf = _ensure_wgs84(gdf)
+        gdf = _sanitize_gdf_for_json(gdf)
+        geojson = json.loads(gdf.to_json())
+    except Exception as e:
+        abort(500, description=f"Falha ao ler Hidrovias BR-319: {e}")
+
+    _hidrovias_br319_geojson_cache = geojson
     return jsonify(geojson)
 
 
@@ -3101,7 +3244,9 @@ else:
 
 
 if __name__ == "__main__":
-    host = os.environ.get("HOST", "127.0.0.1")
+    import socket
+
+    host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "5000"))
     debug = os.environ.get("FLASK_DEBUG", "1" if not IS_PRODUCTION else "0").strip().lower() in (
         "1",
@@ -3111,8 +3256,36 @@ if __name__ == "__main__":
     )
     local_url = f"http://127.0.0.1:{port}"
 
+    def _lan_ips():
+        ips = []
+        try:
+            hostname = socket.gethostname()
+            for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
+                ip = info[4][0]
+                if ip and not ip.startswith("127.") and ip not in ips:
+                    ips.append(ip)
+        except Exception:
+            pass
+        if not ips:
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("8.8.8.8", 80))
+                ip = s.getsockname()[0]
+                s.close()
+                if ip and not ip.startswith("127."):
+                    ips.append(ip)
+            except Exception:
+                pass
+        return ips
+
     print(f"\nInfraGeo AM — modo {'desenvolvimento' if debug else 'produção local'}")
-    print(f"Acesso local: {local_url}\n")
+    print(f"Acesso neste PC: {local_url}")
+    if host in ("0.0.0.0", "::"):
+        for ip in _lan_ips():
+            print(f"Outros dispositivos (mesma rede Wi‑Fi): http://{ip}:{port}")
+        print("Dica: no celular, use o endereço da rede acima (firewall do Windows pode pedir permissão).\n")
+    else:
+        print(f"Host: {host} (defina HOST=0.0.0.0 para abrir em outros aparelhos na rede)\n")
 
     if debug and os.environ.get("FLASK_OPEN_BROWSER", "1").strip().lower() in ("1", "true", "yes", "on"):
         import threading
